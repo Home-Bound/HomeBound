@@ -261,149 +261,233 @@
                                 </div>
 
                                 <div class="px-3 pb-3 pt-2">
-                                    <button class="btn btn-outline-primary btn-sm w-100 rounded-pill fw-bold" 
+                                    <button class="btn btn-sm w-100 rounded-pill fw-bold @(exp.TipoTramite == "Venta" ? "btn-outline-dark" : "btn-outline-primary")" 
                                             @onclick:stopPropagation="true"
-                                            @onclick='() => Nav.NavigateTo($"expediente/{exp.Id}")'>
-                                        <i class="bi bi-folder-check me-1"></i> Expediente EC0110.02
+                                            @onclick='() => Nav.NavigateTo(exp.TipoTramite == "Venta" ? $"seguimiento/{exp.Id}" : $"expediente/{exp.Id}")'>
+                                        
+                                        @if (exp.TipoTramite == "Venta")
+                                        {
+                                            <i class="bi bi-megaphone-fill me-1" style="color: var(--brand-gold, #D4AF37);"></i> 
+                                            <span>Promoción Activa</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-folder-check me-1"></i> 
+                                            <span>Expediente Legal</span>
+                                        }
+                                        
                                     </button>
                                 </div>
 
                             </div>
                         }
                         
-                    @if (datosUsuario != null && datosUsuario.Rol != "COLABORADOR")
-                    {
-                        <button class="btn-fab" @onclick="IniciarCreacion">+</button>
-                    }
+                    
                 }
             }
             }
+            @if (datosUsuario != null && datosUsuario.Rol != "COLABORADOR")
+                    {
+                        <div class="position-fixed" style="bottom: 2rem; right: 2rem; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end;">
+                            
+                            @* --- EL MENÚ DESPLEGABLE --- *@
+                            @if (mostrarMenuCreacion)
+                            {
+                                <div class="d-flex flex-column gap-3 mb-3 align-items-end shadow-sm" style="animation: fadeIn 0.2s ease-in-out;">
+                                    
+                                    <button class="btn btn-light shadow rounded-pill px-4 py-2 d-flex align-items-center gap-3 border-0" 
+                                            style="transition: transform 0.2s;"
+                                            @onclick='() => SeleccionarTipo("Venta")'>
+                                        <span class="fw-bold" style="color: var(--brand-black, #111827);">Promoción de Venta</span>
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-megaphone-fill"></i>
+                                        </div>
+                                    </button>
+
+                                    <button class="btn btn-light shadow rounded-pill px-4 py-2 d-flex align-items-center gap-3 border-0" 
+                                            style="transition: transform 0.2s;"
+                                            @onclick='() => SeleccionarTipo("Cierre")'>
+                                        <span class="fw-bold" style="color: var(--brand-black, #111827);">Trámite de Cierre</span>
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 35px; height: 35px; background-color: var(--brand-gold, #D4AF37);">
+                                            <i class="bi bi-briefcase-fill"></i>
+                                        </div>
+                                    </button>
+                                </div>
+                            }
+
+                            @* --- EL BOTÓN PRINCIPAL (+) --- *@
+                            <button class="btn-fab shadow" 
+                                    style="transition: all 0.3s ease; transform: @(mostrarMenuCreacion ? "rotate(45deg)" : "rotate(0deg)");"
+                                    @onclick="ToggleMenu">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    }
         </div>
 
 @code {
-    // --- NUEVA SEGURIDAD BASADA EN BASE DE DATOS ---
-    UsuarioGoogle? usuarioGoogle = null;
-    UsuarioPermisos? datosUsuario = null; // Aquí guardamos Rol y Empresa que vienen de la DB
+        // --- NUEVA SEGURIDAD BASADA EN BASE DE DATOS ---
+        UsuarioGoogle? usuarioGoogle = null;
+        UsuarioPermisos? datosUsuario = null; // Aquí guardamos Rol y Empresa que vienen de la DB
 
-    // Roles definidos
-    bool esSuperAdmin => datosUsuario?.Rol == "superadmin"; // TÚ (Ve todo de todas las empresas)
-    bool esMaster => datosUsuario?.Rol == "master"; // Jefe de una Inmobiliaria (Ve todo de SU empresa)
-    bool esAsesor => datosUsuario?.Rol == "asesor"; // Asesor (Ve solo LO SUYO)
+        // Roles definidos
+        bool esSuperAdmin => datosUsuario?.Rol == "superadmin"; // TÚ (Ve todo de todas las empresas)
+        bool esMaster => datosUsuario?.Rol == "master"; // Jefe de una Inmobiliaria (Ve todo de SU empresa)
+        bool esAsesor => datosUsuario?.Rol == "asesor"; // Asesor (Ve solo LO SUYO)
 
-    // Estados
-    bool modoCliente = false;
-    bool linkCopiado = false;
-    bool subiendoFoto = false;
-    bool confirmandoBorrado = false;
-    bool modoCreacion = false;
-    bool mostrarTramitesMuni = false;
-    private bool estaEliminando = false; // <--- ¡AQUÍ ESTÁ PERFECTA!
-    string nuevoPasoNombre = "";
+        // Estados
+        bool modoCliente = false;
+        bool linkCopiado = false;
+        bool subiendoFoto = false;
+        bool confirmandoBorrado = false;
+        bool modoCreacion = false;
+        bool mostrarTramitesMuni = false;
+        private bool estaEliminando = false; 
+        private bool mostrarMenuCreacion = false;
+        string nuevoPasoNombre = "";
 
-    // --- MODELOS ---
-   public class UsuarioGoogle
-    {
-        public string Uid { get; set; } = ""; // <--- AÑADIMOS UID PARA EL GUARDIÁN
-        public string Nombre { get; set; } = ""; 
-        public string Email { get; set; } = ""; 
-        public string FotoUrl { get; set; } = "";
-    }
-
-    // Nueva clase para los datos que bajamos de Firestore
-    public class UsuarioPermisos
-    {
-        public string Rol { get; set; } = "";
-        public string Empresa { get; set; } = "";
-    }
-
-    public class Paso
-    {
-        public string Nombre { get; set; } = "";
-        public string Tipo { get; set; } = "simple";
-        public bool Check1 { get; set; } = false;
-        public bool Check2 { get; set; } = false;
-        public string ValorDato { get; set; } = "";
-        public bool Aplica { get; set; } = true;
-        public DateTime? FechaCompletado { get; set; }
-    }
-
-    public class Expediente
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string AsesorOwnerEmail { get; set; } = "";
-        public string EmpresaOwner { get; set; } = ""; 
-        public string ClienteNombre { get; set; } = "";
-        public string PropiedadTitulo { get; set; } = "";
-        public string? FotoPropiedadUrl { get; set; }
-        public string NotasBitacora { get; set; } = "";
-
-        public List<Paso> PasosTramite { get; set; } = new List<Paso>();
-        public List<Paso> PasosMunicipales { get; set; } = new List<Paso>();
-        public List<DocumentoSimple> Documentos { get; set; } = new();
-            // Lista de correos de los asesores que tienen permiso para ver y editar esto
-        public List<string> Colaboradores { get; set; } = new List<string>();
-
-        public int Avance
-        
+        // --- MODELOS ---
+        public class UsuarioGoogle
         {
-            get
+            public string Uid { get; set; } = ""; 
+            public string Nombre { get; set; } = ""; 
+            public string Email { get; set; } = ""; 
+            public string FotoUrl { get; set; } = "";
+        }
+
+        public class UsuarioPermisos
+        {
+            public string Rol { get; set; } = "";
+            public string Empresa { get; set; } = "";
+        }
+
+        public class Paso
+        {
+            public string Nombre { get; set; } = "";
+            public string Tipo { get; set; } = "simple";
+            public bool Check1 { get; set; } = false;
+            public bool Check2 { get; set; } = false;
+            public string ValorDato { get; set; } = "";
+            public bool Aplica { get; set; } = true;
+            public DateTime? FechaCompletado { get; set; }
+        }
+
+        // 📈 NUEVO V2: Modelo para las métricas de marketing
+        public class SeguimientoMarketing
+        {
+            public int VistasOnline { get; set; } = 0;
+            public int Interesados { get; set; } = 0;
+            public int CitasFisicas { get; set; } = 0;
+            public bool CampanaActiva { get; set; } = false;
+            public string DetalleCampana { get; set; } = "Preparando estrategia...";
+        }
+
+        // 👥 NUEVO V2: Modelo para la bitácora de visitas físicas
+        public class ActividadVisita
+        {
+            public DateTime Fecha { get; set; } = DateTime.Now;
+            public string Visitante { get; set; } = "";
+            public string Comentarios { get; set; } = "";
+            public List<string> Etiquetas { get; set; } = new();
+        }
+
+        public class Expediente
+        {
+            public string Id { get; set; } = Guid.NewGuid().ToString();
+            public string AsesorOwnerEmail { get; set; } = "";
+            public string EmpresaOwner { get; set; } = ""; 
+            public string ClienteNombre { get; set; } = "";
+            public string PropiedadTitulo { get; set; } = "";
+            public string? FotoPropiedadUrl { get; set; }
+            public string NotasBitacora { get; set; } = "";
+
+            // 🧬 NUEVO V2: El ADN del expediente. Por defecto "Cierre" para no romper lo anterior
+            public string TipoTramite { get; set; } = "Cierre"; 
+            
+            // 🎒 NUEVO V2: Mochila de Marketing y Visitas
+            public SeguimientoMarketing Marketing { get; set; } = new SeguimientoMarketing();
+            public List<ActividadVisita> BitacoraVisitas { get; set; } = new();
+
+            public List<Paso> PasosTramite { get; set; } = new List<Paso>();
+            public List<Paso> PasosMunicipales { get; set; } = new List<Paso>();
+            public List<DocumentoSimple> Documentos { get; set; } = new();
+            public List<string> Colaboradores { get; set; } = new List<string>();
+
+            public int Avance
             {
-                var todos = PasosTramite.Where(p => p.Aplica).ToList();
-                var sub = PasosMunicipales.Where(p => p.Aplica).ToList();
-                int totalPasos = todos.Count + sub.Count;
-                if (totalPasos == 0) return 0;
-                int completados = 0;
-                foreach (var p in todos)
+                get
                 {
-                    if (p.Tipo == "doble") { if (p.Check1 && p.Check2) completados++; }
-                    else { if (p.Check1) completados++; }
+                    var todos = PasosTramite.Where(p => p.Aplica).ToList();
+                    var sub = PasosMunicipales.Where(p => p.Aplica).ToList();
+                    int totalPasos = todos.Count + sub.Count;
+                    if (totalPasos == 0) return 0;
+                    int completados = 0;
+                    foreach (var p in todos)
+                    {
+                        if (p.Tipo == "doble") { if (p.Check1 && p.Check2) completados++; }
+                        else { if (p.Check1) completados++; }
+                    }
+                    foreach (var p in sub) { if (p.Check1) completados++; }
+                    return (int)((double)completados / totalPasos * 100);
                 }
-                foreach (var p in sub) { if (p.Check1) completados++; }
-                return (int)((double)completados / totalPasos * 100);
             }
-        }
-        public class DocumentoSimple 
+
+            public class DocumentoSimple 
+            {
+                public string Id { get; set; } = string.Empty;
+                public bool Cargado { get; set; }
+            }
+
+            public Expediente()
+            {
+                PasosTramite = new List<Paso> {
+                    new Paso { Nombre = "Apartado", Tipo = "monto", ValorDato="$50,000" },
+                    new Paso { Nombre = "Autorización de Crédito", Tipo = "opcional" },
+                    new Paso { Nombre = "Revisión Contrato Promesa", Tipo = "doble" },
+                    new Paso { Nombre = "Firma Contrato y Enganche", Tipo = "monto", ValorDato="$" },
+                    new Paso { Nombre = "Entrega Docs a Notaría", Tipo = "doble" },
+                    new Paso { Nombre = "Fideicomiso", Tipo = "opcional" },
+                    new Paso { Nombre = "Firma Escritura", Tipo = "fecha" },
+                    new Paso { Nombre = "Entrega de Llaves", Tipo = "simple" },
+                    new Paso { Nombre = "Cambio Servic. (Luz/Agua)", Tipo = "simple" }
+                };
+                
+                PasosMunicipales = new List<Paso> {
+                    new Paso { Nombre = "Pago Predial", Tipo = "sub" },
+                    new Paso { Nombre = "Cédula Catastral", Tipo = "sub" },
+                    new Paso { Nombre = "Constancia de nomenclatura", Tipo = "sub" },
+                    new Paso { Nombre = "Cambio de Propietario", Tipo = "opcional" },
+                    new Paso { Nombre = "Constancia No Adeudo Predial", Tipo = "sub" },
+                    new Paso { Nombre = "Constancia Cooperación Obra", Tipo = "sub" },
+                    new Paso { Nombre = "Constancia No Adeudo Agua", Tipo = "sub" }
+                };
+                }
+            }
+        List<Expediente> listaCompleta = new List<Expediente>();
+            Expediente? expedienteSeleccionado = null;
+            Expediente nuevoExpediente = new Expediente();
+
+            // =========================================================
+            // MÉTODO FUSIONADO (Detecta Cliente y Detecta Sesión)
+            // =========================================================
+        
+            // 1. ESTE ES EL ATRAPADOR DE LA URL (Debe ir suelto aquí en el @code, no dentro de una clase)
+            [Parameter]
+            public string? Id { get; set; }
+
+            private void ToggleMenu()
         {
-            public string Id { get; set; } = string.Empty;
-            public bool Cargado { get; set; }
+            mostrarMenuCreacion = !mostrarMenuCreacion;
         }
 
-        public Expediente()
+        private void SeleccionarTipo(string tipoTramite)
         {
-            PasosTramite = new List<Paso> {
-        new Paso { Nombre = "Apartado", Tipo = "monto", ValorDato="$50,000" },
-        new Paso { Nombre = "Autorización de Crédito", Tipo = "opcional" },
-        new Paso { Nombre = "Revisión Contrato Promesa", Tipo = "doble" },
-        new Paso { Nombre = "Firma Contrato y Enganche", Tipo = "monto", ValorDato="$" },
-        new Paso { Nombre = "Entrega Docs a Notaría", Tipo = "doble" },
-        new Paso { Nombre = "Fideicomiso", Tipo = "opcional" },
-        new Paso { Nombre = "Firma Escritura", Tipo = "fecha" },
-        new Paso { Nombre = "Entrega de Llaves", Tipo = "simple" },
-        new Paso { Nombre = "Cambio Servic. (Luz/Agua)", Tipo = "simple" }
-        };
-                    PasosMunicipales = new List<Paso> {
-        new Paso { Nombre = "Pago Predial", Tipo = "sub" },
-        new Paso { Nombre = "Cédula Catastral", Tipo = "sub" },
-        new Paso { Nombre = "Constancia de nomenclatura", Tipo = "sub" },
-        new Paso { Nombre = "Cambio de Propietario", Tipo = "opcional" },
-        new Paso { Nombre = "Constancia No Adeudo Predial", Tipo = "sub" },
-        new Paso { Nombre = "Constancia Cooperación Obra", Tipo = "sub" },
-        new Paso { Nombre = "Constancia No Adeudo Agua", Tipo = "sub" }
-        };
+            // 1. Cerramos el menú flotante
+            mostrarMenuCreacion = false;
+            
+            // 2. Aquí llamamos a tu función de crear, pero le pasamos el "ADN"
+            IniciarCreacion(tipoTramite);
         }
-        }
-
-  List<Expediente> listaCompleta = new List<Expediente>();
-    Expediente? expedienteSeleccionado = null;
-    Expediente nuevoExpediente = new Expediente();
-
-    // =========================================================
-    // MÉTODO FUSIONADO (Detecta Cliente y Detecta Sesión)
-    // =========================================================
-   
-    // 1. ESTE ES EL ATRAPADOR DE LA URL (Debe ir suelto aquí en el @code, no dentro de una clase)
-    [Parameter]
-    public string? Id { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -576,7 +660,16 @@
     JSRuntime.InvokeVoidAsync("guardarExpedienteFirestore", json);
     }
 
-    void IniciarCreacion() { nuevoExpediente = new Expediente(); modoCreacion = true; expedienteSeleccionado = null; }
+    void IniciarCreacion(string tipoTramite) 
+{ 
+    nuevoExpediente = new Expediente(); 
+    
+    // 🧬 AQUÍ OCURRE LA MAGIA: Le inyectamos el tipo de trámite desde el inicio
+    nuevoExpediente.TipoTramite = tipoTramite; 
+    
+    modoCreacion = true; 
+    expedienteSeleccionado = null; 
+}
     void CancelarCreacion() => modoCreacion = false;
     void VerDetalles(Expediente exp) { expedienteSeleccionado = exp; modoCreacion = false; }
     void VolverALista() { expedienteSeleccionado = null; modoCreacion = false; confirmandoBorrado = false; }
@@ -885,3 +978,4 @@
                                     }
                                                                     ;
                                 }
+                                

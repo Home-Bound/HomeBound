@@ -1,0 +1,173 @@
+@page "/seguimiento/{Id}"
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+<div class="container pb-5" style="max-width: 600px; margin: 0 auto; font-family: 'Inter', sans-serif;">
+    
+    @* --- 1. CABECERA: LA PROPIEDAD --- *@
+    <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-card, 28px);">
+        <div class="position-relative">
+            <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80" 
+                 class="w-100" style="height: 220px; object-fit: cover;" alt="Fachada Propiedad" />
+            
+            <div class="position-absolute top-0 end-0 m-3">
+                <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill fw-bold" style="font-size: 0.8rem;">
+                    <span class="text-success me-1">●</span> Promoción Activa
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body p-4 bg-white">
+            <h4 class="fw-bold mb-1" style="color: var(--brand-black, #111827);">Residencia Selva Escondida</h4>
+            <h3 class="fw-bold mb-3" style="color: var(--brand-gold, #D4AF37);">$4,500,000 MXN</h3>
+            <p class="text-muted small mb-0"><i class="bi bi-geo-alt-fill me-1"></i> Puerto Morelos, Quintana Roo</p>
+        </div>
+    </div>
+
+    @* --- 2. EL EMBUDO DE MARKETING (KPIs) --- *@
+    <h5 class="fw-bold mb-3 px-2" style="color: var(--brand-black, #111827);">Rendimiento de tu propiedad</h5>
+    <div class="row g-3 mb-4">
+        <div class="col-4">
+            <div class="bg-white rounded-4 shadow-sm p-3 text-center h-100 border" style="border-color: rgba(0,0,0,0.04);">
+                <i class="bi bi-eye text-muted fs-4 mb-1 d-block"></i>
+                <h4 class="fw-bold mb-0">1,245</h4>
+                <small class="text-muted" style="font-size: 0.7rem;">Vistas online</small>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="bg-white rounded-4 shadow-sm p-3 text-center h-100 border" style="border-color: rgba(0,0,0,0.04);">
+                <i class="bi bi-chat-dots text-primary fs-4 mb-1 d-block" style="color: var(--brand-gold, #D4AF37) !important;"></i>
+                <h4 class="fw-bold mb-0">18</h4>
+                <small class="text-muted" style="font-size: 0.7rem;">Interesados</small>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="bg-white rounded-4 shadow-sm p-3 text-center h-100 border" style="border-color: rgba(0,0,0,0.04);">
+                <i class="bi bi-key text-success fs-4 mb-1 d-block"></i>
+                <h4 class="fw-bold mb-0">3</h4>
+                <small class="text-muted" style="font-size: 0.7rem;">Citas físicas</small>
+            </div>
+        </div>
+    </div>
+
+    @* --- 3. TERMÓMETRO DE DIFUSIÓN --- *@
+    <div class="bg-white rounded-4 shadow-sm p-3 mb-5 border d-flex align-items-center justify-content-between" style="border-color: rgba(0,0,0,0.04);">
+        <div>
+            <h6 class="fw-bold mb-1">Campaña Activa</h6>
+            <small class="text-muted">Publicado en 4 portales y Meta Ads</small>
+        </div>
+        <div class="d-flex gap-2">
+            <i class="bi bi-facebook fs-4 text-primary"></i>
+            <i class="bi bi-instagram fs-4" style="color: #E1306C;"></i>
+            <i class="bi bi-globe fs-4 text-muted"></i>
+        </div>
+    </div>
+
+    @* --- 4. BITÁCORA DE VISITAS (El Timeline) --- *@
+    <h5 class="fw-bold mb-4 px-2" style="color: var(--brand-black, #111827);">Últimas Visitas y Comentarios</h5>
+    
+    <div class="position-relative ms-3">
+        <div class="position-absolute" style="left: 19px; top: 20px; bottom: 0; width: 2px; background-color: #E2E8F0; z-index: 0;"></div>
+
+        <div class="d-flex mb-4 position-relative z-1">
+            <div class="me-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" 
+                     style="width: 40px; height: 40px; background-color: var(--brand-gold, #D4AF37); color: white;">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+            </div>
+            <div class="card shadow-sm rounded-4 border-0 flex-fill bg-white">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0">Familia González</h6>
+                        <small class="text-muted" style="font-size: 0.75rem;">Ayer</small>
+                    </div>
+                    <p class="small text-muted mb-3">Recorrido completo. Les encantó la iluminación natural y el área de la alberca.</p>
+                    
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge border text-dark shadow-sm px-2 py-1" style="background-color: #fef08a; border-radius: 8px;">
+                            <i class="bi bi-tag-fill text-warning me-1"></i> Consideran el precio algo alto
+                        </span>
+                        <span class="badge border text-dark shadow-sm px-2 py-1" style="background-color: #f3f4f6; border-radius: 8px;">
+                            <i class="bi bi-tag-fill text-secondary me-1"></i> Requiere pintar fachada
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex mb-4 position-relative z-1">
+            <div class="me-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" 
+                     style="width: 40px; height: 40px; background-color: var(--brand-black, #111827); color: white;">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+            </div>
+            <div class="card shadow-sm rounded-4 border-0 flex-fill bg-white">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0">Sr. Roberto Mendoza</h6>
+                        <small class="text-muted" style="font-size: 0.75rem;">Hace 5 días</small>
+                    </div>
+                    <p class="small text-muted mb-3">Inversionista buscando para rentar. Hizo una oferta inicial por debajo del precio base.</p>
+                    
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge border text-dark shadow-sm px-2 py-1" style="background-color: #dcfce7; border-radius: 8px;">
+                            <i class="bi bi-check-circle-fill text-success me-1"></i> ¡Oferta Recibida!
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* --- 5. BOTÓN DE ÉXITO: CONVERTIR A CIERRE --- *@
+    <div class="mt-5 mb-4 px-2">
+        <div class="card shadow border-0 rounded-4 overflow-hidden" style="background: linear-gradient(135deg, var(--brand-black, #111827) 0%, #2d3748 100%);">
+            <div class="card-body p-4 text-center">
+                <div class="mb-3">
+                    <span class="badge bg-white text-dark rounded-pill px-3 py-2 shadow-sm">
+                        🎉 ¡Oferta Aceptada!
+                    </span>
+                </div>
+                <h5 class="fw-bold text-white mb-2">Es hora del cierre legal</h5>
+                <p class="small text-light opacity-75 mb-4">
+                    Convierte esta promoción en un expediente formal para comenzar a recolectar los documentos del vendedor y comprador.
+                </p>
+                <button class="btn w-100 fw-bold rounded-pill shadow-sm text-white" 
+                        style="background-color: var(--brand-gold, #D4AF37); padding: 12px 20px; transition: transform 0.2s;"
+                        @onclick="ConvertirExpediente">
+                    <i class="bi bi-rocket-takeoff-fill me-2"></i> Iniciar Trámite de Cierre
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-5 mb-4 opacity-50">
+        <small class="fw-bold d-block" style="color: var(--brand-black, #111827);">Powered by HomeBound</small>
+        <small class="text-muted" style="font-size: 0.7rem;">El portal de seguimiento exclusivo de Tu Casa Caribe Realty</small>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = "123";
+
+    // --- FUNCIÓN MÁGICA DE CONVERSIÓN ---
+    private async Task ConvertirExpediente()
+    {
+        // 1. Pedimos confirmación para evitar "dedazos"
+        bool confirmado = await JS.InvokeAsync<bool>("confirm", "🎉 ¡Felicidades por la venta!\n\n¿Estás seguro de convertir esta propiedad en un Expediente de Cierre? Esta acción cambiará el formato de la carpeta para comenzar a subir documentos.");
+
+        if (confirmado)
+        {
+            // 2. Simulamos la conexión a Firebase por ahora.
+            // En el futuro aquí llamaremos a: await JS.InvokeVoidAsync("actualizarTipoTramite", Id, "Cierre");
+            
+            // 3. Mostramos mensaje de éxito
+            await JS.InvokeVoidAsync("alert", "✅ ¡Expediente convertido exitosamente!\n\nRedirigiendo al panel principal...");
+
+            // 4. Lo mandamos de regreso al Home para que vea que su botón ya cambió a color azul (Cierre)
+            Nav.NavigateTo(""); 
+        }
+    }
+}

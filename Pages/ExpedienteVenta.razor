@@ -15,13 +15,19 @@
             <p class="text-light text-center px-4">Descargando y empaquetando los documentos de la nube.<br/>Por favor, espera unos segundos y no cierres esta página.</p>
         </div>
     }
-<div class="expediente-container p-3">
+        <div class="expediente-container p-3">
     <div class="d-flex align-items-center sticky-top bg-white py-3 mb-4" style="z-index: 1020; top: 0; border-bottom: 1px solid #f0f0f0;">
-    <button class="btn btn-link text-dark p-0 me-3" @onclick='() => Navigation.NavigateTo("")'>
-        <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
-    </button>
-    <h3 class="fw-bold mb-0">Expediente @Id</h3>
-</div>
+        <button class="btn btn-link text-dark p-0 me-3" @onclick='() => Navigation.NavigateTo("")'>
+            <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
+        </button>
+        
+        <div>
+            <h3 class="fw-bold mb-0 text-uppercase">
+                @(expedienteSeleccionado?.PropiedadTitulo ?? "CARGANDO...")
+            </h3>
+            <small class="text-muted" style="font-size: 0.75rem;">ID: @Id</small>
+        </div>
+    </div>
     
     <div class="alert alert-warning border-0 shadow-sm rounded-4 mb-4">
         <div class="d-flex">
@@ -41,7 +47,7 @@
                     <i class="bi bi-people-fill text-primary me-2"></i> Asesores Colaboradores
                 </h6>
                 <span class="badge bg-white text-dark border">
-                    @(expedienteSeleccionado.Colaboradores?.Count ?? 0) accesos
+                    @(expedienteSeleccionado?.Colaboradores?.Count ?? 0) accesos
                 </span>
             </div>
             
@@ -56,7 +62,7 @@
                 </button>
             </div>
             }
-            @if (expedienteSeleccionado.Colaboradores != null && expedienteSeleccionado.Colaboradores.Any())
+            @if (expedienteSeleccionado?.Colaboradores != null && expedienteSeleccionado.Colaboradores.Any())
             {
                 <div class="d-flex flex-wrap gap-2">
                     @foreach (var email in expedienteSeleccionado.Colaboradores)
@@ -368,73 +374,74 @@
     }
 
     private async Task ProcesarEnvio(string formatoDescarga)
+{
+    // 1. Validación de seguridad
+    if (!TodosCargados)
     {
-        // 1. Validación de seguridad
-        if (!TodosCargados)
+        await JS.InvokeVoidAsync("alert", "⚠️ Faltan documentos obligatorios.");
+        return;
+    }
+
+    // 2. Personalización del mensaje según el botón presionado
+    string mensajeConfirmacion = formatoDescarga == "ZIP" 
+        ? "¿Preparar y descargar carpeta con todos los archivos separados?" 
+        : "¿Unir todos los documentos y descargar en un solo PDF?";
+
+    bool confirmado = await JS.InvokeAsync<bool>("confirm", 
+        $"{mensajeConfirmacion}\n\nComenzará la cuenta regresiva de 10 días para su eliminación de la nube.");
+
+    if (confirmado)
+    {
+        // 🟢 Encendemos pantalla de carga (Sticky)
+        estaDescargando = true;
+        StateHasChanged();
+
+        try
         {
-            await JS.InvokeVoidAsync("alert", "⚠️ Faltan documentos obligatorios.");
-            return;
+            // --- 🪄 LÓGICA DE NOMBRE DINÁMICO ---
+            // Usamos el Nombre de la Propiedad; si no existe, usamos el ID
+            string nombrePropiedad = expedienteSeleccionado?.PropiedadTitulo ?? "EXPEDIENTE";
+            
+            // Creamos un nombre descriptivo: "CASA_DE_LAS_NUBES_VENDEDOR"
+            string nombreBase = $"{nombrePropiedad}_{pestanaActiva}";
+            
+            // Limpiamos espacios y puntos para que el archivo sea válido
+            string nombreFinal = nombreBase.Replace(" ", "_").Replace(".", "_").ToUpper();
+
+            // --- 📦 FILTRADO QUIRÚRGICO DE DATOS ---
+            // Solo enviamos a JavaScript los documentos que pertenecen a la pestaña actual
+            var docsFiltrados = ChecklistDocs.Where(d => d.Parte == pestanaActiva).ToList();
+            
+            // Convertimos la sub-lista filtrada a JSON
+            var checklistJson = System.Text.Json.JsonSerializer.Serialize(docsFiltrados);
+
+            // --- 🚀 LLAMADA A JAVASCRIPT ---
+            // Enviamos el nombre personalizado, solo los documentos de la pestaña y el formato
+            await JS.InvokeVoidAsync("descargarRespaldoExpediente", nombreFinal, checklistJson, formatoDescarga);
+
+            // 3. Registro de cierre en Firestore (Se sella el expediente general)
+            var datosCierre = new 
+            { 
+                Estatus = "Enviado a Notaría", 
+                FechaEnvio = DateTime.UtcNow.ToString("o") 
+            };
+            await JS.InvokeVoidAsync("sellarExpedienteFirestore", Id, datosCierre);
+
+            // 4. Notificación final al usuario
+            await JS.InvokeVoidAsync("alert", $"✅ ¡Expediente procesado! Se ha descargado: {nombreFinal}");
         }
-
-        // 2. Personalización del mensaje según el botón presionado
-        string mensajeConfirmacion = formatoDescarga == "ZIP" 
-            ? "¿Preparar y descargar carpeta con todos los archivos separados?" 
-            : "¿Unir todos los documentos y descargar en un solo PDF?";
-
-        bool confirmado = await JS.InvokeAsync<bool>("confirm", 
-            $"{mensajeConfirmacion}\n\nComenzará la cuenta regresiva de 10 días para su eliminación de la nube.");
-
-        if (confirmado)
+        catch (Exception ex)
         {
-            // 🟢 Encendemos pantalla de carga (Sticky)
-            estaDescargando = true;
+            await JS.InvokeVoidAsync("alert", $"Error crítico: {ex.Message}");
+        }
+        finally
+        {
+            // 🔴 Apagamos pantalla de carga pase lo que pase
+            estaDescargando = false;
             StateHasChanged();
-
-            try
-            {
-                // --- 🪄 LIMPIEZA DE NOMBRE PROFUNDA ---
-                // Extraemos el ID o el nombre de la propiedad
-                string nombreOriginal = expedienteSeleccionado?.Id ?? "Expediente";
-                
-                // Limpiamos espacios y PUNTOS para evitar que el navegador se confunda
-                // De "EC0110.02" pasará a "EC0110_02"
-                string nombreLimpio = nombreOriginal
-                    .Replace(" ", "_")
-                    .Replace(".", "_")
-                    .ToUpper();
-
-                // --- 📦 PREPARACIÓN DE DATOS ---
-                // Convertimos la lista de documentos a JSON para el puente con JS
-                var checklistJson = System.Text.Json.JsonSerializer.Serialize(ChecklistDocs);
-
-                // --- 🚀 LLAMADA A JAVASCRIPT ---
-                // Aquí enviamos el formato ("ZIP" o "PDF") para que JS sepa qué generar
-                await JS.InvokeVoidAsync("descargarRespaldoExpediente", nombreLimpio, checklistJson, formatoDescarga);
-
-                // 3. Registro de cierre en Firestore
-                var datosCierre = new 
-                { 
-                    Estatus = "Enviado a Notaría", 
-                    FechaEnvio = DateTime.UtcNow.ToString("o") 
-                };
-                await JS.InvokeVoidAsync("sellarExpedienteFirestore", Id, datosCierre);
-
-                // 4. Notificación final al usuario
-                await JS.InvokeVoidAsync("alert", $"✅ ¡Expediente procesado! El archivo '{nombreLimpio}' se ha descargado.");
-            }
-            catch (Exception ex)
-            {
-                await JS.InvokeVoidAsync("alert", $"Error crítico: {ex.Message}");
-            }
-            finally
-            {
-                // 🔴 Apagamos pantalla de carga pase lo que pase
-                estaDescargando = false;
-                StateHasChanged();
-            }
         }
     }
-    private string nuevoColaboradorEmail = "";
+}    private string nuevoColaboradorEmail = "";
 
     private async Task AgregarColaborador()
     {
