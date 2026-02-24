@@ -1,0 +1,3 @@
+C:\Users\Jonai\Desktop\InmoCierres\release\firebase.json
+C:\Users\Jonai\Desktop\InmoCierres\release\package-lock.json
+C:\Users\Jonai\Desktop\InmoCierres\release\web.config

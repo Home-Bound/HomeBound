@@ -1,0 +1,496 @@
+/* --- VARIABLES DE DISEÑO (PALETA PREMIUM HOMEBOUND) --- */
+:root {
+    /* COLORES DE MARCA - Tonos más sobrios y elegantes */
+    --brand-gold: #D4AF37;          /* Dorado metálico elegante */
+    --brand-gold-dark: #B5952F;     /* Dorado oscuro para hovers */
+    --brand-black: #111827;         /* Carbón profundo (casi negro, más premium) */
+
+    /* ASIGNACIÓN DE ROLES */
+    --primary-color: var(--brand-gold);
+    --primary-hover: var(--brand-gold-dark);
+    
+    /* FONDOS Y TEXTOS */
+    --bg-app: #F8FAFC;              /* Fondo gris/perla extremadamente sutil */
+    --bg-card: #FFFFFF;             /* Blanco puro */
+    --text-main: var(--brand-black);
+    --text-muted: #9CA3AF;          /* Gris plata para textos secundarios */
+    --border-color: rgba(0, 0, 0, 0.04); /* Bordes casi invisibles */
+    
+    /* ESTILOS (Sensación de App Móvil) */
+    --radius-card: 28px;            /* Curvas amplias y modernas */
+    --radius-btn: 14px;             /* Botones suaves */
+    --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.04); /* Sombra amplia y difuminada */
+    --shadow-hover: 0 20px 40px -10px rgba(212, 175, 55, 0.15); /* Sombra dorada flotante */
+    --glass-nav: rgba(255, 255, 255, 0.85); 
+}
+
+body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: 'Inter', 'Outfit', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em; /* Aprieta un poquito el texto para verse más profesional */
+}
+
+/* --- 1. NAVBAR (Efecto Cristal) --- */
+.navbar-custom {
+    background: var(--glass-nav) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255,255,255,0.3); /* Brillo sutil debajo */
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+    min-height: 90px; 
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.navbar-brand {
+    color: var(--text-main) !important;
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: -0.5px;
+}
+
+/* --- ESTILOS DEL LOGO EN NAVBAR --- */
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 16px; 
+    margin-left: 10px;
+}
+
+.logo-circle {
+    width: 65px;  
+    height: 65px; 
+    background-color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px; 
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06); 
+    border: 2px solid #F3F4F6; /* Borde gris muy sutil en vez de dorado fuerte */
+    position: relative;
+    z-index: 10;
+    transition: transform 0.3s ease;
+}
+
+.logo-circle:hover {
+    transform: scale(1.05);
+}
+
+.logo-circle img {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+}
+
+.brand-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem; 
+    color: var(--brand-black);
+    letter-spacing: -1px; 
+    line-height: 1;
+}
+
+/* --- 2. TARJETAS (Sensación Flotante) --- */
+.card-propiedad {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); /* Transición súper fluida */
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.card-propiedad:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(212, 175, 55, 0.3); 
+}
+
+.card-body { padding: 1.8rem; }
+
+.img-cover {
+    height: 220px;
+    width: 100%;
+    object-fit: cover;
+}
+
+/* --- 3. FORMULARIOS Y CONTROLES --- */
+.form-control {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: var(--radius-btn);
+    padding: 0.9rem 1.2rem;
+    color: var(--text-main);
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.form-control:focus {
+    background-color: #FFF;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1); 
+    outline: none;
+}
+
+.form-check-input {
+    width: 1.5em;
+    height: 1.5em;
+    margin-top: 0.1em;
+    border-radius: 6px;
+    border: 2px solid #CBD5E1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23111827' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+}
+
+/* --- 4. BOTONES --- */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #FFF; /* Texto blanco se ve más sobrio sobre este dorado */
+    border: none;
+    border-radius: var(--radius-btn);
+    padding: 0.8rem 1.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 15px rgba(212, 175, 55, 0.25);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    color: #FFF;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px rgba(212, 175, 55, 0.35);
+}
+
+.btn-fab {
+    width: 60px;
+    height: 60px;
+    border-radius: 20px; /* Forma de "Squircle" (cuadrado redondeado premium) */
+    background: var(--brand-black);
+    color: var(--brand-gold); 
+    border: none;
+    box-shadow: 0 10px 25px rgba(17, 24, 39, 0.3);
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 1000;
+}
+
+.btn-fab:hover {
+    transform: scale(1.08) rotate(90deg);
+    background: var(--brand-gold);
+    color: #FFF; 
+    box-shadow: 0 15px 35px rgba(212, 175, 55, 0.4);
+}
+
+/* --- 5. BARRA DE PROGRESO Y OTROS --- */
+.progress {
+    background-color: #F1F5F9;
+    border-radius: 100px;
+    height: 10px !important; 
+    box-shadow: none; /* Quitamos sombras internas para que se vea más plano y moderno */
+}
+
+.progress-bar {
+    background-color: var(--primary-color) !important;
+    border-radius: 100px;
+}
+
+.badge.bg-light.text-dark.border {
+    background-color: #FFF !important;
+    border-color: #E2E8F0 !important;
+    color: var(--text-muted) !important;
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+    border-radius: 8px;
+}
+
+.empty-icon-bi {
+    font-size: 4rem;
+    color: #E2E8F0;
+    margin-bottom: 1rem;
+}
+
+.text-primary { color: var(--brand-gold) !important; }
+a.text-primary:hover { color: var(--brand-gold-dark) !important; text-decoration: none; }
+
+/* --- 6. SISTEMA DE CARGA Y ERRORES (CENTRADOS Y MEJORADOS) --- */
+
+/* El círculo de carga animado de Blazor - AHORA 100% CENTRADO */
+.loading-progress {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6rem;
+    height: 6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: #F1F5F9;
+    stroke-width: 0.4rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: var(--brand-gold); 
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    bottom: -40px; /* Lo bajamos para que quede debajo del círculo */
+    width: 200px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+}
+
+/* La barra de errores */
+#blazor-error-ui {
+    background: #FEF2F2; /* Rojo clarito muy sutil */
+    color: #991B1B;
+    bottom: 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    display: none; 
+    left: 0;
+    padding: 1rem 1.5rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    text-align: center;
+    border-top: 1px solid #FCA5A5;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 1.5rem;
+    top: 1rem;
+    font-weight: bold;
+}
+
+.legal-footer {
+    opacity: 0.5;
+    font-size: 0.75rem;
+    border-top: 1px solid #F1F5F9;
+    padding-top: 20px;
+    text-align: center;
+}
+
+/* --- MURO LEGAL (AVISO DE PRIVACIDAD) --- */
+.legal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(17, 24, 39, 0.7); /* Transparencia elegante */
+    backdrop-filter: blur(8px); 
+    z-index: 9999; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    animation: fadeInOverlay 0.4s forwards;
+}
+
+.legal-card {
+    background: white;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 28px;
+    padding: 2.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    transform: translateY(20px);
+    animation: slideUpCard 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) 0.1s forwards;
+    opacity: 0;
+}
+
+.legal-body {
+    text-align: left;
+    max-height: 300px; 
+    overflow-y: auto;
+    margin: 1.5rem 0;
+    padding-right: 15px;
+    background: #F8FAFC;
+    border: 1px solid #F1F5F9;
+    padding: 1.2rem;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* --- ANIMACIÓN DE ENTRADA (ESTILO WISE / EFECTO CORTINA) --- */
+
+.splash-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none; /* Permite que los clics pasen a la app una vez abierta */
+}
+
+/* Las dos mitades de la cortina */
+.splash-curtain {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 50vh;
+    background: radial-gradient(circle at center, #1F2937 0%, #111827 100%); /* Fondo premium */
+    z-index: 10000;
+    transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1); /* La curva de velocidad tipo Wise */
+    pointer-events: auto; /* Bloquea clics mientras está cerrada */
+}
+
+.splash-curtain.top { top: 0; transform-origin: top; }
+.splash-curtain.bottom { bottom: 0; transform-origin: bottom; }
+
+/* El contenedor del logo y la barra */
+.splash-content {
+    position: relative;
+    z-index: 10001;
+    text-align: center;
+    transition: opacity 0.3s ease, transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+/* --- LA MAGIA AL CARGAR (.loaded) --- */
+.splash-container.loaded .splash-content {
+    opacity: 0;
+    transform: scale(1.2); /* El logo hace un zoom suave hacia ti y desaparece */
+}
+
+.splash-container.loaded .splash-curtain.top {
+    transform: translateY(-100%); /* La mitad superior vuela hacia arriba */
+}
+
+.splash-container.loaded .splash-curtain.bottom {
+    transform: translateY(100%); /* La mitad inferior cae */
+}
+
+/* --- ELEMENTOS INTERNOS --- */
+.splash-logo {
+    width: 110px;
+    height: auto;
+    animation: zoomOutFromPhone 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    filter: drop-shadow(0 10px 25px rgba(212, 175, 55, 0.2)); 
+}
+
+.splash-text {
+    color: #FFF;
+    font-weight: 800;
+    font-size: 2.2rem;
+    margin-top: 1.5rem;
+    letter-spacing: -1px;
+}
+
+.loading-bar-container {
+    width: 120px;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    margin: 30px auto;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-bar {
+    height: 100%;
+    background: var(--brand-gold);
+    /* Lee automáticamente el progreso real de Blazor */
+    width: var(--blazor-load-percentage, 0%);
+    transition: width 0.1s ease-out;
+}
+
+@keyframes zoomOutFromPhone {
+    0% { opacity: 0; transform: scale(0.8) translateY(20px); filter: blur(5px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+/* --- KEYFRAMES --- */
+@keyframes fadeInOverlay { to { opacity: 1; } }
+@keyframes slideUpCard { to { opacity: 1; transform: translateY(0); } }
+
+@keyframes zoomOutFromPhone {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px); 
+        filter: blur(5px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0); 
+        filter: blur(0) drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+    }
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes loadingMove {
+    0% { left: -40%; }
+    50% { left: 50%; width: 50%; } 
+    100% { left: 100%; }
+}
+
+/* --- ÁREA DE EXPEDIENTE --- */
+.expediente-container {
+    background-color: var(--bg-card); /* Integrado a la paleta */
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+    padding: 1.5rem;
+}
+
+.upload-zone input[type=file] {
+    max-width: 250px;
+    border-radius: 12px;
+    border: 2px dashed #CBD5E1;
+    background: #F8FAFC;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-zone input[type=file]:hover {
+    background: #F1F5F9;
+}
+
+.upload-zone input[type=file]:focus {
+    border-color: var(--brand-gold);
+    background: rgba(212, 175, 55, 0.02);
+}

@@ -1,0 +1,887 @@
+﻿@page "/"
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider   
+
+<PageTitle>HomeBound</PageTitle>
+
+<nav class="navbar navbar-dark navbar-custom fixed-top">
+    <div class="container-fluid">
+        @if (modoCliente)
+        {
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-house-door-fill me-2 text-primary"></i> @expedienteSeleccionado?.PropiedadTitulo
+            </span>
+        }
+        else if (expedienteSeleccionado != null)
+        {
+            <button class="btn btn-link text-dark p-0 me-3" @onclick="VolverALista">
+                <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
+            </button>
+            <span class="navbar-brand mb-0 h1 text-truncate">@expedienteSeleccionado.PropiedadTitulo</span>
+        }
+        else
+        {
+            <a class="navbar-brand p-0" href="#">
+                <div class="logo-container">
+                    <div class="logo-circle animate__animated animate__fadeInLeft">
+                        <img src="logo.png" alt="HomeBound Logo" />
+                    </div>
+                    <span class="brand-text animate__animated animate__fadeInRight">HomeBound</span>
+                </div>
+            </a>
+        }
+    </div>
+</nav>
+
+<div class="container" style="margin-top: 120px; margin-bottom: 100px;">
+
+    @if (!modoCliente)
+    {
+        <AuthorizeView>
+            <NotAuthorized>
+                <div class="text-center mt-5">
+                    <h3 class="fw-bold text-secondary mb-3">Portal de Seguimiento</h3>
+                    <button class="btn btn-light shadow border py-2 px-4 d-inline-flex align-items-center gap-2 rounded-pill"
+                            @onclick="IniciarSesionGoogle">
+                        <span style="color: #DB4437; font-weight:bold; font-size: 1.2rem;">G</span>
+                        <span class="fw-bold">Ingresar como Asesor</span>
+                    </button>
+                </div>
+            </NotAuthorized>
+            <Authorized>
+                <div class="user-panel d-flex justify-content-between align-items-center animate__animated animate__fadeInDown">
+                    <div class="d-flex align-items-center gap-3">
+                        @if (usuarioGoogle != null && !string.IsNullOrEmpty(usuarioGoogle.FotoUrl))
+                        {
+                            <img src="@usuarioGoogle.FotoUrl" class="rounded-circle shadow-sm" width="50" height="50"
+                                 style="border: 2px solid white;" />
+                        }
+                        <div>
+                            <div class="fw-bold text-dark">@(usuarioGoogle?.Nombre ?? context.User.Identity?.Name)</div>
+                            <div class="small text-muted">
+                                @if (datosUsuario != null)
+                                {
+                                    <span class="badge bg-secondary">@datosUsuario.Rol.ToUpper()</span>
+                                    <span class="ms-1" style="font-size:0.7rem">@datosUsuario.Empresa</span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">Sin Acceso ⛔</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @onclick="CerrarSesion">Salir</button>
+                </div>
+
+                @if (datosUsuario == null)
+                {
+                    <div class="alert alert-warning mt-3 text-center">
+                        Hola <strong>@(usuarioGoogle?.Email ?? "")</strong>. <br>
+                        No tienes una cuenta activa en el sistema. <br>
+                        Contacta a tu Master Broker para que te dé de alta.
+                    </div>
+                }
+            </Authorized>
+        </AuthorizeView>
+    }
+
+        @if (modoCliente && expedienteSeleccionado != null)
+        {
+            @* 1. EL CLIENTE ENTRÓ Y EL EXPEDIENTE YA CARGÓ *@
+            <div class="text-center mb-4 animate__animated animate__fadeIn">
+                <h2 class="fw-bold" style="color: var(--color-primario);">¡Hola, @expedienteSeleccionado.ClienteNombre!</h2>
+                <p class="text-muted">Aquí está el avance de tu propiedad.</p>
+            </div>
+            @RenderizarDetalles(expedienteSeleccionado)
+        }
+        else if (modoCliente && expedienteSeleccionado == null)
+        {
+            @* 2. EL CLIENTE ENTRÓ PERO FIREBASE AÚN ESTÁ PENSANDO (Evita la pantalla blanca) *@
+            <div class="text-center mt-5 p-5 animate__animated animate__fadeIn">
+                <div class="spinner-border" role="status" style="color: var(--color-primario); width: 3rem; height: 3rem;"></div>
+                <h5 class="mt-3 text-muted fw-bold">Buscando tu expediente...</h5>
+                <p class="text-muted small">Por favor espera un momento.</p>
+            </div>
+        }
+        else if (usuarioGoogle != null && datosUsuario != null) // Solo si está logueado Y registrado en DB
+        {
+            
+            if (modoCreacion)
+            {
+                <div class="card card-propiedad p-3 animate__animated animate__fadeInUp">
+                    <h4 class="fw-bold mb-4" style="color: var(--color-primario);">Nuevo Trámite</h4>
+
+                   <div class="mb-4 text-center">
+                        @if (!string.IsNullOrEmpty(nuevoExpediente.FotoPropiedadUrl))
+                        {
+                            <div class="position-relative">
+                                <img src="@nuevoExpediente.FotoPropiedadUrl" class="img-fluid rounded-3 shadow-sm"
+                                    style="max-height: 200px;" />
+                                <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle"
+                                        @onclick="() => nuevoExpediente.FotoPropiedadUrl = null">✕</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <label class="d-flex align-items-center justify-content-center bg-light rounded-3 border-2 border-dashed text-muted"
+                                style="height: 150px; cursor: pointer; border-color: #dee2e6; flex-direction: column;">
+                                @if (subiendoFoto)
+                                {
+                                    <span>⏳ Subiendo...</span>
+                                }
+                                else
+                                {
+                                    <span style="font-size: 2rem;"><i class="bi bi-camera" style="font-size: 2rem;"></i></span>
+                                    <span class="small">Subir Foto</span>
+                                }
+                                <InputFile OnChange="CargarFoto" hidden accept="image/jpeg, image/png, image/webp" />
+                            </label>
+                        }
+                    </div>
+
+                    <input type="text" class="form-control form-control-lg mb-3 bg-light border-0"
+                           @bind="nuevoExpediente.ClienteNombre" placeholder="Nombre del Cliente" />
+                    <input type="text" class="form-control form-control-lg mb-4 bg-light border-0"
+                           @bind="nuevoExpediente.PropiedadTitulo" placeholder="Título Propiedad" />
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg rounded-pill shadow-sm w-100" @onclick="GuardarExpediente"
+                                disabled="@subiendoFoto">Crear Expediente</button>
+                        <button class="btn btn-link text-muted" @onclick="CancelarCreacion">Cancelar</button>
+                    </div>
+                </div>
+            }
+            else if (expedienteSeleccionado != null)
+            {
+                @RenderizarDetalles(expedienteSeleccionado)
+
+                <div class="mt-4 pb-5">
+                    <div class="card border-0 bg-white shadow-sm p-3 mb-3 rounded-3">
+                        <p class="small text-muted mb-2 fw-bold text-uppercase">🔗 Link para Cliente</p>
+                        <div class="input-group">
+                            <input type="text" class="form-control border-0 bg-light"
+                                   value="@ObtenerLinkCompartir(expedienteSeleccionado.Id)" readonly />
+                            <button class="btn btn-dark" @onclick="() => CopiarLink(expedienteSeleccionado.Id)">Copiar</button>
+                        </div>
+                        @if (linkCopiado)
+                        {
+                            <small class="text-success fw-bold mt-1 d-block animate__animated animate__fadeIn">¡Enlace copiado!</small>
+                        }
+                    </div>
+
+                    <div class="card border-0 bg-light shadow-sm p-3 mb-3 rounded-3 border-dashed">
+                        <h6 class="small fw-bold text-uppercase text-muted mb-2">➕ Agregar Paso Extra</h6>
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Nombre del paso..." @bind="nuevoPasoNombre" />
+                            <button class="btn btn-secondary" @onclick="AgregarPasoExtra">Agregar</button>
+                        </div>
+                    </div>
+
+                   @* --- PANTALLA NEGRA DE CARGA (Bloquea clics y navegación) --- *@
+                    @if (estaEliminando)
+                    {
+                        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <div class="spinner-border text-danger" role="status" style="width: 4rem; height: 4rem; border-width: 0.4rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h3 class="text-white mt-4 fw-bold">Eliminando expediente...</h3>
+                            <p class="text-light text-center px-4">Destruyendo documentos y liberando espacio.<br/>Por favor, no cierres ni recargues esta página.</p>
+                        </div>
+                    }
+            else
+                        {
+                            <div class="alert alert-danger text-center animate__animated animate__headShake">
+                                <strong>¿Estás seguro?</strong>
+                                <div class="d-flex gap-2 justify-content-center mt-2">
+                                    <button class="btn btn-danger btn-sm" @onclick="EliminarTramite">Sí, eliminar</button>
+                                    <button class="btn btn-light btn-sm" @onclick="() => confirmandoBorrado = false">Cancelar</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            else
+                {
+                    var misExpedientes = ObtenerExpedientesFiltrados();
+
+                    @if (misExpedientes.Count == 0)
+                    {
+                        <div class="text-center empty-state">
+                            <i class="bi bi-inbox empty-icon-bi"></i>
+                            <h5 class="fw-bold">Sin expedientes</h5>
+                            <p>No hay trámites visibles para tu empresa.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <h6 class="text-secondary text-uppercase mb-0">TRÁMITES (@ObtenerExpedientesFiltrados().Count)</h6>
+                      @foreach (var exp in misExpedientes)
+                        {
+                            <div class="card card-propiedad mb-3 shadow-sm border-0" style="cursor: pointer;">
+                                
+                                <div class="row g-0" @onclick="() => VerDetalles(exp)">
+                                    <div class="col-4">
+                                        @if (!string.IsNullOrEmpty(exp.FotoPropiedadUrl))
+                                        {
+                                            <img src="@exp.FotoPropiedadUrl" class="h-100 w-100 rounded-start" style="object-fit: cover; min-height: 100px;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="h-100 w-100 bg-light rounded-start d-flex align-items-center justify-content-center text-muted"
+                                                style="font-size: 2rem; min-height: 100px;"><i class="bi bi-building"></i></div>
+                                        }
+                                    </div>
+                                    
+                                    <div class="col-8">
+                                        <div class="card-body py-2 px-3">
+                                            <h5 class="card-title fw-bold mb-1 text-truncate text-dark">@exp.PropiedadTitulo</h5>
+                                            
+
+                                            @if (exp.AsesorOwnerEmail != usuarioGoogle.Email)
+                                            {
+                                                <span class="badge bg-light text-secondary border mb-1"
+                                                    style="font-size: 0.6rem;">@exp.AsesorOwnerEmail</span>
+                                            }
+                                            else
+                                            {
+                                                <p class="card-text text-muted small mb-2">👤 @exp.ClienteNombre</p>
+                                            }
+
+                                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                                <span class="badge rounded-pill bg-light text-dark border">@exp.Avance%</span>
+                                                <div class="progress flex-grow-1 ms-2" style="height: 6px;">
+                                                    <div class="progress-bar bg-warning" style="width: @(exp.Avance)%;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="px-3 pb-3 pt-2">
+                                    <button class="btn btn-outline-primary btn-sm w-100 rounded-pill fw-bold" 
+                                            @onclick:stopPropagation="true"
+                                            @onclick='() => Nav.NavigateTo($"expediente/{exp.Id}")'>
+                                        <i class="bi bi-folder-check me-1"></i> Expediente EC0110.02
+                                    </button>
+                                </div>
+
+                            </div>
+                        }
+                        
+                    @if (datosUsuario != null && datosUsuario.Rol != "COLABORADOR")
+                    {
+                        <button class="btn-fab" @onclick="IniciarCreacion">+</button>
+                    }
+                }
+            }
+            }
+        </div>
+
+@code {
+    // --- NUEVA SEGURIDAD BASADA EN BASE DE DATOS ---
+    UsuarioGoogle? usuarioGoogle = null;
+    UsuarioPermisos? datosUsuario = null; // Aquí guardamos Rol y Empresa que vienen de la DB
+
+    // Roles definidos
+    bool esSuperAdmin => datosUsuario?.Rol == "superadmin"; // TÚ (Ve todo de todas las empresas)
+    bool esMaster => datosUsuario?.Rol == "master"; // Jefe de una Inmobiliaria (Ve todo de SU empresa)
+    bool esAsesor => datosUsuario?.Rol == "asesor"; // Asesor (Ve solo LO SUYO)
+
+    // Estados
+    bool modoCliente = false;
+    bool linkCopiado = false;
+    bool subiendoFoto = false;
+    bool confirmandoBorrado = false;
+    bool modoCreacion = false;
+    bool mostrarTramitesMuni = false;
+    private bool estaEliminando = false; // <--- ¡AQUÍ ESTÁ PERFECTA!
+    string nuevoPasoNombre = "";
+
+    // --- MODELOS ---
+   public class UsuarioGoogle
+    {
+        public string Uid { get; set; } = ""; // <--- AÑADIMOS UID PARA EL GUARDIÁN
+        public string Nombre { get; set; } = ""; 
+        public string Email { get; set; } = ""; 
+        public string FotoUrl { get; set; } = "";
+    }
+
+    // Nueva clase para los datos que bajamos de Firestore
+    public class UsuarioPermisos
+    {
+        public string Rol { get; set; } = "";
+        public string Empresa { get; set; } = "";
+    }
+
+    public class Paso
+    {
+        public string Nombre { get; set; } = "";
+        public string Tipo { get; set; } = "simple";
+        public bool Check1 { get; set; } = false;
+        public bool Check2 { get; set; } = false;
+        public string ValorDato { get; set; } = "";
+        public bool Aplica { get; set; } = true;
+        public DateTime? FechaCompletado { get; set; }
+    }
+
+    public class Expediente
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string AsesorOwnerEmail { get; set; } = "";
+        public string EmpresaOwner { get; set; } = ""; 
+        public string ClienteNombre { get; set; } = "";
+        public string PropiedadTitulo { get; set; } = "";
+        public string? FotoPropiedadUrl { get; set; }
+        public string NotasBitacora { get; set; } = "";
+
+        public List<Paso> PasosTramite { get; set; } = new List<Paso>();
+        public List<Paso> PasosMunicipales { get; set; } = new List<Paso>();
+        public List<DocumentoSimple> Documentos { get; set; } = new();
+            // Lista de correos de los asesores que tienen permiso para ver y editar esto
+        public List<string> Colaboradores { get; set; } = new List<string>();
+
+        public int Avance
+        
+        {
+            get
+            {
+                var todos = PasosTramite.Where(p => p.Aplica).ToList();
+                var sub = PasosMunicipales.Where(p => p.Aplica).ToList();
+                int totalPasos = todos.Count + sub.Count;
+                if (totalPasos == 0) return 0;
+                int completados = 0;
+                foreach (var p in todos)
+                {
+                    if (p.Tipo == "doble") { if (p.Check1 && p.Check2) completados++; }
+                    else { if (p.Check1) completados++; }
+                }
+                foreach (var p in sub) { if (p.Check1) completados++; }
+                return (int)((double)completados / totalPasos * 100);
+            }
+        }
+        public class DocumentoSimple 
+        {
+            public string Id { get; set; } = string.Empty;
+            public bool Cargado { get; set; }
+        }
+
+        public Expediente()
+        {
+            PasosTramite = new List<Paso> {
+        new Paso { Nombre = "Apartado", Tipo = "monto", ValorDato="$50,000" },
+        new Paso { Nombre = "Autorización de Crédito", Tipo = "opcional" },
+        new Paso { Nombre = "Revisión Contrato Promesa", Tipo = "doble" },
+        new Paso { Nombre = "Firma Contrato y Enganche", Tipo = "monto", ValorDato="$" },
+        new Paso { Nombre = "Entrega Docs a Notaría", Tipo = "doble" },
+        new Paso { Nombre = "Fideicomiso", Tipo = "opcional" },
+        new Paso { Nombre = "Firma Escritura", Tipo = "fecha" },
+        new Paso { Nombre = "Entrega de Llaves", Tipo = "simple" },
+        new Paso { Nombre = "Cambio Servic. (Luz/Agua)", Tipo = "simple" }
+        };
+                    PasosMunicipales = new List<Paso> {
+        new Paso { Nombre = "Pago Predial", Tipo = "sub" },
+        new Paso { Nombre = "Cédula Catastral", Tipo = "sub" },
+        new Paso { Nombre = "Constancia de nomenclatura", Tipo = "sub" },
+        new Paso { Nombre = "Cambio de Propietario", Tipo = "opcional" },
+        new Paso { Nombre = "Constancia No Adeudo Predial", Tipo = "sub" },
+        new Paso { Nombre = "Constancia Cooperación Obra", Tipo = "sub" },
+        new Paso { Nombre = "Constancia No Adeudo Agua", Tipo = "sub" }
+        };
+        }
+        }
+
+  List<Expediente> listaCompleta = new List<Expediente>();
+    Expediente? expedienteSeleccionado = null;
+    Expediente nuevoExpediente = new Expediente();
+
+    // =========================================================
+    // MÉTODO FUSIONADO (Detecta Cliente y Detecta Sesión)
+    // =========================================================
+   
+    // 1. ESTE ES EL ATRAPADOR DE LA URL (Debe ir suelto aquí en el @code, no dentro de una clase)
+    [Parameter]
+    public string? Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        string idBuscado = Id ?? "";
+
+        if (string.IsNullOrEmpty(idBuscado))
+        {
+            var uri = Nav.ToAbsoluteUri(Nav.Uri);
+            if (uri.Query.Contains("id="))
+            {
+                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                idBuscado = query["id"] ?? "";
+            }
+        }
+
+        if (!string.IsNullOrEmpty(idBuscado)) 
+        {
+            modoCliente = true;
+            try 
+            {
+                var json = await JSRuntime.InvokeAsync<string>("obtenerUnicoExpediente", idBuscado);
+                
+                if (!string.IsNullOrEmpty(json)) 
+                {
+                    expedienteSeleccionado = System.Text.Json.JsonSerializer.Deserialize<Expediente>(json);
+                }
+                else
+                {
+                    // Si Firebase responde pero viene vacío
+                    // Cambia la alerta que tienes por esta:
+                await JSRuntime.InvokeVoidAsync("alert", $"⚠️ No se encontró el expediente con ID: '{idBuscado}'. Revisa el enlace.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // 🚨 ¡ESTO ES CLAVE! Si Firebase bloquea la lectura, el celular nos lanzará una alerta
+                await JSRuntime.InvokeVoidAsync("alert", $"Error de conexión con Firebase: {ex.Message}");
+            }
+        }
+        else 
+        {
+            // Lógica del guardián de sesión para ti (Asesor)
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity != null && user.Identity.IsAuthenticated)
+            {
+                usuarioGoogle = new UsuarioGoogle 
+                { 
+                    Uid = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "",
+                    Nombre = user.Identity.Name ?? "",
+                    Email = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? ""
+                };
+
+                await RevisarPermisosYCargar();
+            }
+        }
+    }
+
+    // --- FILTRADO MULTI-INMOBILIARIA ---
+    List<Expediente> ObtenerExpedientesFiltrados()
+    {
+        // 1. Si no ha iniciado sesión en Google, no ve nada
+        if (usuarioGoogle == null || string.IsNullOrEmpty(usuarioGoogle.Email)) 
+            return new List<Expediente>();
+
+        string miCorreo = usuarioGoogle.Email.ToLower();
+
+        // 2. Si eres SUPERADMIN, ves todo el universo
+        if (esSuperAdmin) return listaCompleta;
+
+        // 3. LA REGLA INFALIBLE: Si tu correo está en la lista de invitados, O eres el creador, lo ves. (Sin importar la empresa o si sus datos de usuario tardaron en cargar).
+        return listaCompleta.Where(x => 
+            (x.Colaboradores != null && x.Colaboradores.Contains(miCorreo)) ||
+            (x.AsesorOwnerEmail != null && x.AsesorOwnerEmail.ToLower() == miCorreo)
+        ).ToList();
+    }
+    async Task IniciarSesionGoogle()
+    {
+        try
+        {
+            usuarioGoogle = await JSRuntime.InvokeAsync<UsuarioGoogle>("loginGoogle");
+
+            if (usuarioGoogle != null)
+            {
+                if (AuthStateProvider is FirebaseAuthStateProvider provider)
+                {
+                    provider.NotificarLogin(new UsuarioInfo 
+                    { 
+                        uid = usuarioGoogle.Uid, 
+                        nombre = usuarioGoogle.Nombre, 
+                        email = usuarioGoogle.Email, 
+                        fotoUrl = usuarioGoogle.FotoUrl 
+                    });
+                }
+                
+                await RevisarPermisosYCargar();
+            }
+        }
+        catch { }
+    }
+
+    async Task CerrarSesion()
+    {
+        await JSRuntime.InvokeVoidAsync("logoutFirebase"); 
+        
+        if (AuthStateProvider is FirebaseAuthStateProvider provider)
+        {
+            provider.NotificarLogout();
+        }
+
+        usuarioGoogle = null; 
+        datosUsuario = null; 
+        expedienteSeleccionado = null; 
+    }
+
+    // 4. REVISAR PERMISOS
+    private async Task RevisarPermisosYCargar()
+    {
+        if (usuarioGoogle == null) return;
+        
+        var jsonPermisos = await JSRuntime.InvokeAsync<string?>("obtenerRolUsuario", usuarioGoogle.Email);
+        if (!string.IsNullOrEmpty(jsonPermisos))
+        {
+            // 🪄 LENTES MÁGICOS PARA EL TRADUCTOR DE USUARIO
+            var opciones = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            
+            // Usamos las opciones aquí:
+            datosUsuario = System.Text.Json.JsonSerializer.Deserialize<UsuarioPermisos>(jsonPermisos, opciones);
+            
+            // Llama a tu función original para traer los expedientes de Firebase
+            await CargarDesdeNube(); 
+        }
+        else
+        {
+            datosUsuario = null;
+        }
+    }
+    async Task CargarDesdeNube()
+    {
+        try
+        {
+            // 1. Le mandamos el correo a la función para que sepa a quién buscar
+            string miCorreo = usuarioGoogle?.Email ?? "";
+            var json = await JSRuntime.InvokeAsync<string>("obtenerExpedientesFirestore", miCorreo);
+            
+            if (!string.IsNullOrEmpty(json))
+            {
+                // 2. 🪄 LENTES ESPECIALES PARA EL TRADUCTOR
+                // Le decimos que no se ponga estricto con las mayúsculas/minúsculas de Firebase
+                var opciones = new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                };
+
+                listaCompleta = JsonSerializer.Deserialize<List<Expediente>>(json, opciones) ?? new List<Expediente>();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar: {ex.Message}");
+        }
+    }
+
+    async Task AutoGuardar() { if (expedienteSeleccionado != null) await GuardarEnNube(expedienteSeleccionado); }
+    async Task GuardarEnNube(Expediente? exp)
+    {
+        if (exp == null) return; var json = JsonSerializer.Serialize(exp); await
+    JSRuntime.InvokeVoidAsync("guardarExpedienteFirestore", json);
+    }
+
+    void IniciarCreacion() { nuevoExpediente = new Expediente(); modoCreacion = true; expedienteSeleccionado = null; }
+    void CancelarCreacion() => modoCreacion = false;
+    void VerDetalles(Expediente exp) { expedienteSeleccionado = exp; modoCreacion = false; }
+    void VolverALista() { expedienteSeleccionado = null; modoCreacion = false; confirmandoBorrado = false; }
+
+    async Task GuardarExpediente()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoExpediente.ClienteNombre)) return;
+
+        // --- GUARDADO INTELIGENTE ---
+        // Guardamos quién lo creó Y de qué empresa es
+        nuevoExpediente.AsesorOwnerEmail = usuarioGoogle?.Email ?? "";
+        nuevoExpediente.EmpresaOwner = datosUsuario?.Empresa ?? "Sin Empresa";
+
+        // --- 🪄 NUEVA MAGIA: COLABORADORES ---
+        // Aseguramos que la lista exista
+        if (nuevoExpediente.Colaboradores == null)
+        {
+            nuevoExpediente.Colaboradores = new List<string>();
+        }
+        
+        // Agregamos tu correo a la lista de accesos para que siempre puedas verlo
+        if (!string.IsNullOrEmpty(nuevoExpediente.AsesorOwnerEmail))
+        {
+            nuevoExpediente.Colaboradores.Add(nuevoExpediente.AsesorOwnerEmail.ToLower());
+        }
+
+        // --- GUARDADO FINAL ---
+        listaCompleta.Add(nuevoExpediente);
+        await GuardarEnNube(nuevoExpediente);
+        modoCreacion = false;
+    }  
+    
+    async Task EliminarTramite()
+    {
+        if (expedienteSeleccionado == null) return;
+
+        // 🟢 1. ENCENDEMOS LA PANTALLA NEGRA DE CARGA (El overlay)
+        estaEliminando = true;
+        StateHasChanged(); 
+
+        try
+        {
+            // 2. Limpieza de Storage (PDFs)
+            if (expedienteSeleccionado.Documentos != null && expedienteSeleccionado.Documentos.Any())
+            {
+                foreach (var doc in expedienteSeleccionado.Documentos.Where(d => d.Cargado))
+                {
+                    await JSRuntime.InvokeVoidAsync("borrarArchivoStorage", expedienteSeleccionado.Id, doc.Id);
+                }
+            }
+
+            // 2.5 Limpieza de la Foto de Perfil
+            if (!string.IsNullOrEmpty(expedienteSeleccionado.FotoPropiedadUrl))
+            {
+                await JSRuntime.InvokeVoidAsync("borrarArchivoPorUrl", expedienteSeleccionado.FotoPropiedadUrl);
+            }
+
+            // 3. Borramos de Firestore
+            await JSRuntime.InvokeVoidAsync("eliminarExpedienteFirestore", expedienteSeleccionado.Id);
+
+            // 4. Actualizamos la lista
+            listaCompleta.Remove(expedienteSeleccionado);
+            VolverALista();
+            
+            await JSRuntime.InvokeVoidAsync("alert", "Expediente eliminado correctamente.");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Hubo un problema: {ex.Message}");
+        }
+        finally
+        {
+            // 🔴 5. APAGAMOS LA PANTALLA NEGRA DE CARGA Y RESETEAMOS LA CONFIRMACIÓN
+            estaEliminando = false;
+            confirmandoBorrado = false; // Lo regresamos a su estado original
+            StateHasChanged();
+        }
+        }
+        async Task CargarFoto(InputFileChangeEventArgs e)
+        {
+        subiendoFoto = true;
+        try
+        {
+            var archivoOriginal = e.File;
+
+            // 1. 🪄 EL COMPRESOR: Forzamos a que sea un JPEG ligero de máximo 800x600 píxeles
+            var formato = "image/jpeg";
+            var archivoComprimido = await archivoOriginal.RequestImageFileAsync(formato, maxWidth: 800, maxHeight: 600);
+
+            // 2. ABRIMOS LA PUERTA Y LEEMOS EL ARCHIVO COMPRIMIDO
+            // Aumentamos el límite de seguridad a 5MB por si la foto original era muy pesada
+            using var stream = archivoComprimido.OpenReadStream(maxAllowedSize: 5120000); 
+            using var memoryStream = new MemoryStream();
+            
+            // Usamos CopyToAsync, que es la forma más segura de leer archivos sin que se rompan
+            await stream.CopyToAsync(memoryStream);
+            var buffer = memoryStream.ToArray();
+            
+            // 3. CONVERTIMOS A BASE64
+            var base64 = Convert.ToBase64String(buffer);
+            
+            // 4. Le ponemos la extensión .jpg forzosa para que Firebase la reconozca perfecto
+            string nombreArchivo = $"{Guid.NewGuid()}.jpg";
+            
+            // 5. MANDAMOS A JAVASCRIPT / FIREBASE
+            string? url = await JSRuntime.InvokeAsync<string?>("subirImagenStorage", nombreArchivo, base64);
+            
+            if (!string.IsNullOrEmpty(url)) 
+            {
+                nuevoExpediente.FotoPropiedadUrl = url;
+            }
+        }
+        catch (Exception)
+        { 
+            // Si quieres ver el error en la consola por si algo falla, descomenta la siguiente línea:
+            // Console.WriteLine($"Error al subir foto: {ex.Message}");
+        }
+        finally
+        {
+            subiendoFoto = false;
+        }
+    }
+
+    async Task AgregarPasoExtra()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoPasoNombre) || expedienteSeleccionado == null) return;
+        expedienteSeleccionado.PasosTramite.Add(new Paso { Nombre = nuevoPasoNombre, Tipo = "simple" });
+        nuevoPasoNombre = "";
+        await AutoGuardar();
+    }
+
+    string ObtenerLinkCompartir(string id) => $"{Nav.BaseUri}?id={id}";
+    async Task CopiarLink(string id)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText",
+    ObtenerLinkCompartir(id)); linkCopiado = true; await Task.Delay(2000); linkCopiado = false;
+    }
+
+    RenderFragment RenderizarDetalles(Expediente exp) => __builder =>
+    {
+    <div class="card card-propiedad mb-5 animate__animated animate__fadeIn">
+        @if (!string.IsNullOrEmpty(exp.FotoPropiedadUrl))
+        {
+            <img src="@exp.FotoPropiedadUrl" class="img-cover" />
+        }
+
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="fw-bold" style="font-size: 1.2rem;">@exp.PropiedadTitulo</span>
+                <span class="fw-bold text-primary">@exp.Avance%</span>
+            </div>
+            <div class="progress mb-4 rounded-pill" style="height: 10px;">
+                <div class="progress-bar @(exp.Avance == 100 ? "bg-success" : "")"
+                     style="width: @(exp.Avance)%; background: var(--gradiente-brand);"></div>
+            </div>
+
+            @if (exp.Avance == 100)
+            {
+                <div class="alert alert-success text-center fw-bold shadow-sm animate__animated animate__bounceIn">
+                    🎉 ¡PROCESO CONCLUIDO! 🎉
+                </div>
+            }
+
+            <h6 class="mb-3 text-secondary text-uppercase small fw-bold">Checklist de Avance</h6>
+            <ul class="list-group list-group-flush mb-4">
+                @foreach (var paso in exp.PasosTramite)
+                {
+                    string miCorreo = usuarioGoogle?.Email?.ToLower() ?? "";
+                    bool puedeEditar = esSuperAdmin || esMaster || (exp.AsesorOwnerEmail?.ToLower() == miCorreo);
+                    <li class="list-group-item px-0 py-3 border-light">
+                        <div class="d-flex flex-column w-100">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span
+                                    class="@(paso.Check1 && (paso.Tipo != "doble" || paso.Check2) ? "text-success fw-bold" : "text-dark fw-bold")">
+                                    @paso.Nombre @(!paso.Aplica ? "(N/A)" : "")
+                                </span>
+                                @if (paso.Tipo == "opcional" && puedeEditar)
+                                {
+                                    <button class="btn btn-sm btn-link text-decoration-none small text-muted"
+                                            @onclick="@(async () => { paso.Aplica = !paso.Aplica; await AutoGuardar(); })">
+                                        @(paso.Aplica ? "Ocultar" : "Activar")
+                                    </button>
+                                }
+                            </div>
+
+                            @if (paso.Aplica)
+                            {
+                                @if (paso.Tipo == "monto")
+                                {
+                                    <div class="d-flex gap-2">
+                                        <div class="input-group input-group-sm">
+                                            <div class="input-group-text bg-white">
+                                                <input class="form-check-input mt-0" type="checkbox" checked="@paso.Check1"
+                                                       disabled="@(!puedeEditar)"
+                                                       @onchange="@(async () => { paso.Check1 = !paso.Check1; await AutoGuardar(); })">
+                                                </div>
+                                                <input type="text" class="form-control" placeholder="Monto" @bind="paso.ValorDato"
+                                                       @bind:after="AutoGuardar" disabled="@(!puedeEditar)">
+                                                </div>
+                                            </div>
+                                        }
+                    else if (paso.Tipo == "doble")
+                                        {
+                                            <div class="d-flex gap-2 w-100">
+                                                <div class="form-check w-50 p-2 border rounded bg-light">
+                                                    <input class="form-check-input" type="checkbox" checked="@paso.Check1"
+                                                           disabled="@(!puedeEditar)"
+                                                           @onchange="@(async () => { paso.Check1 = !paso.Check1; await AutoGuardar(); })">
+                                                        <label class="form-check-label small">Comprador</label>
+                                                    </div>
+                                                    <div class="form-check w-50 p-2 border rounded bg-light">
+                                                        <input class="form-check-input" type="checkbox" checked="@paso.Check2"
+                                                               disabled="@(!puedeEditar)"
+                                                               @onchange="@(async () => { paso.Check2 = !paso.Check2; await AutoGuardar(); })">
+                                                            <label class="form-check-label small">Vendedor</label>
+                                                        </div>
+                                                    </div>
+                                                }
+                    else if (paso.Tipo == "fecha")
+                                                {
+                                                    <div class="d-flex gap-2">
+                                                        <div class="input-group input-group-sm">
+                                                            <div class="input-group-text bg-white">
+                                                                <input class="form-check-input mt-0" type="checkbox" checked="@paso.Check1"
+                                                                       disabled="@(!puedeEditar)"
+                                                                       @onchange="@(async () => { paso.Check1 = !paso.Check1; await AutoGuardar(); })">
+                                                                </div>
+                                                                <input type="date" class="form-control" value="@paso.ValorDato"
+                                                                       @onchange="@(async (ChangeEventArgs e) => { paso.ValorDato = e.Value?.ToString() ?? ""; await AutoGuardar(); })"
+                                                                       disabled="@(!puedeEditar)">
+                                                                </div>
+                                                            </div>
+                                                        }
+                    else
+                                                        {
+                                                            <div class="form-check">
+                                                                <input class="form-check-input shadow-sm" type="checkbox" checked="@paso.Check1"
+                                                                       disabled="@(!puedeEditar)"
+                                                                       @onchange="@(async () => { paso.Check1 = !paso.Check1; await AutoGuardar(); })"
+                                                                       style="transform: scale(1.2);">
+                                                                    <label class="form-check-label ms-2 text-muted small">Completado</label>
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </li>
+
+                                                @if (paso.Nombre.Contains("Firma Contrato y Enganche"))
+                                                {
+                                                    <li class="list-group-item px-0 py-2 border-0">
+                                                        <button class="btn btn-light w-100 text-start d-flex justify-content-between align-items-center border"
+                                                                @onclick="() => mostrarTramitesMuni = !mostrarTramitesMuni">
+                                                            <span class="fw-bold small text-primary"><i class="bi bi-bank"></i> Trámites Municipales
+                                                                (@exp.PasosMunicipales.Count(p =>
+                                                                                                                                                        p.Check1)/@exp.PasosMunicipales.Count)</span>
+                                                                <span>@(mostrarTramitesMuni ? "▲" : "▼")</span>
+                                                            </button>
+
+                                                            @if (mostrarTramitesMuni)
+                                                            {
+                                                                <div class="bg-light p-3 rounded-bottom border border-top-0 animate__animated animate__fadeIn">
+                                                                    @foreach (var sub in exp.PasosMunicipales)
+                                                                    {
+                                                                        <div class="d-flex align-items-center justify-content-between mb-2 border-bottom pb-2">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <input class="form-check-input me-2" type="checkbox" checked="@sub.Check1"
+                                                                                       disabled="@(!sub.Aplica || !puedeEditar)"
+                                                                                       @onchange="@(async () => { sub.Check1 = !sub.Check1; await AutoGuardar(); })">
+                                                                                    <span
+                                                                                    class="small @(!sub.Aplica ? "text-decoration-line-through text-muted" : "")">@sub.Nombre</span>
+                                                                                </div>
+                                                                                @if ((sub.Tipo == "opcional" || sub.Nombre.Contains("Propietario")) && puedeEditar)
+                                                                                {
+                                                                                    <small class="text-primary pointer" style="cursor:pointer; font-size:0.7rem;"
+                                                                                           @onclick="@(async () => { sub.Aplica = !sub.Aplica; await AutoGuardar(); })">
+                                                                                        @(sub.Aplica ? "N/A" : "Activar")
+                                                                                    </small>
+                                                                                }
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                            </li>
+                                                        }
+                                                    }
+                                                </ul>
+
+                                                <div class="mt-4 pt-3 border-top">
+                                                    <h6 class="mb-2 text-secondary text-uppercase small fw-bold">📝 Notas / Bitácora</h6>
+                                                    @if (esSuperAdmin || esMaster || (esAsesor && exp.AsesorOwnerEmail == usuarioGoogle?.Email))
+                                                    {
+                                                        <textarea class="form-control bg-light" rows="4" placeholder="Escribe aquí..." @bind="exp.NotasBitacora"
+                                                                  @bind:after="AutoGuardar"></textarea>
+                                                        <small class="text-muted">Se guarda automáticamente.</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="p-3 bg-light rounded text-muted">
+                                                            @(string.IsNullOrEmpty(exp.NotasBitacora) ? "Sin notas registradas." : exp.NotasBitacora)
+                                                        </div>
+                                                    }
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    }
+                                                                    ;
+                                }

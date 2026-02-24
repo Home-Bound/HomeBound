@@ -1,0 +1,62 @@
+@inject IJSRuntime JS
+
+@if (!fueAceptado)
+{
+    <div class="legal-overlay">
+        <div class="legal-card animate__animated animate__fadeInUp">
+            <div class="legal-header">
+                <i class="bi bi-shield-lock-fill text-primary" style="font-size: 2rem;"></i>
+                <h4>Aviso de Privacidad y Uso</h4>
+            </div>
+            
+            <div class="legal-body">
+                <p>Bienvenido a <strong>HomeBound</strong>. Antes de continuar, necesitamos que aceptes nuestros términos.</p>
+                
+                <h6>1. Protección de Datos</h6>
+                <p class="small text-muted">
+                    De acuerdo con la LFPDPPP, tus datos (y los de tus clientes) están protegidos y encriptados. 
+                    No vendemos ni compartimos información con terceros sin tu autorización explícita.
+                </p>
+
+                <h6>2. Propiedad Intelectual</h6>
+                <p class="small text-muted">
+                    El software "HomeBound" y su código fuente son propiedad exclusiva de <strong>HomeBound Technologies © 2026</strong>. 
+                    El uso no autorizado, copia o ingeniería inversa será perseguido legalmente ante el INDAUTOR e IMPI.
+                </p>
+
+                <h6>3. Responsabilidad</h6>
+                <p class="small text-muted">
+                    Esta herramienta es un asistente de gestión. HomeBound no se hace responsable por errores en la captura de datos inmobiliarios.
+                </p>
+            </div>
+
+            <div class="legal-footer">
+                <button class="btn btn-primary w-100 py-3 fw-bold rounded-pill" @onclick="AceptarTerminos">
+                    Entendido y Acepto los Términos
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool fueAceptado = true; // Por defecto asumimos que sí para no parpadear, luego verificamos.
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Revisamos si ya firmó antes
+        var estado = await JS.InvokeAsync<string>("localStorage.getItem", "legal_accepted_v1");
+        
+        if (string.IsNullOrEmpty(estado))
+        {
+            fueAceptado = false; // No ha firmado, mostramos el muro
+        }
+    }
+
+    private async Task AceptarTerminos()
+    {
+        // Guardamos la firma en el navegador del usuario
+        await JS.InvokeVoidAsync("localStorage.setItem", "legal_accepted_v1", "true");
+        fueAceptado = true; // Quitamos el muro
+    }
+}

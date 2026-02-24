@@ -1,0 +1,468 @@
+@page "/expediente" 
+@page "/expediente/{Id}"
+@using Microsoft.AspNetCore.Components.Forms
+@using static InmoCierres.Pages.Home
+
+@inject NavigationManager Navigation
+@inject IJSRuntime JS   
+    @if (estaDescargando)
+    {
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div class="spinner-border text-success" role="status" style="width: 4rem; height: 4rem; border-width: 0.4rem;">
+                <span class="visually-hidden">Procesando...</span>
+            </div>
+            <h3 class="text-white mt-4 fw-bold">Generando archivo...</h3>
+            <p class="text-light text-center px-4">Descargando y empaquetando los documentos de la nube.<br/>Por favor, espera unos segundos y no cierres esta página.</p>
+        </div>
+    }
+<div class="expediente-container p-3">
+    <div class="d-flex align-items-center sticky-top bg-white py-3 mb-4" style="z-index: 1020; top: 0; border-bottom: 1px solid #f0f0f0;">
+    <button class="btn btn-link text-dark p-0 me-3" @onclick='() => Navigation.NavigateTo("")'>
+        <i class="bi bi-arrow-left" style="font-size: 1.5rem;"></i>
+    </button>
+    <h3 class="fw-bold mb-0">Expediente @Id</h3>
+</div>
+    
+    <div class="alert alert-warning border-0 shadow-sm rounded-4 mb-4">
+        <div class="d-flex">
+            <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+            <div>
+                <strong>Estándar de Calidad:</strong> Solo se admiten archivos <b>PDF</b> escaneados. 
+                <br><small>Las fotos de cámara no cumplen con el estándar de comercialización.</small>
+            </div>
+        </div>
+    </div>
+    
+    @* --- SECCIÓN: COMPARTIR EXPEDIENTE EC0110.02 --- *@
+    <div class="card shadow-sm border-0 mb-4 rounded-4 bg-light">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="fw-bold mb-0" style="color: var(--brand-black);">
+                    <i class="bi bi-people-fill text-primary me-2"></i> Asesores Colaboradores
+                </h6>
+                <span class="badge bg-white text-dark border">
+                    @(expedienteSeleccionado.Colaboradores?.Count ?? 0) accesos
+                </span>
+            </div>
+            
+            <p class="text-muted small mb-3">Agrega el correo del asesor colega para que pueda subir documentos a este expediente.</p>
+             
+            @if (!esSoloColaborador)
+            {
+            <div class="d-flex gap-2 mb-3">
+                <input type="email" class="form-control form-control-sm rounded-3" @bind="nuevoColaboradorEmail" placeholder="ejemplo@remax.com" />
+                <button class="btn btn-sm btn-dark px-3 rounded-3 fw-bold" @onclick="AgregarColaborador">
+                    Invitar
+                </button>
+            </div>
+            }
+            @if (expedienteSeleccionado.Colaboradores != null && expedienteSeleccionado.Colaboradores.Any())
+            {
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var email in expedienteSeleccionado.Colaboradores)
+                    {
+                        <span class="badge border text-dark shadow-sm px-2 py-1 d-flex align-items-center gap-2" style="background-color: #fff;">
+                            <i class="bi bi-person-circle text-muted"></i> @email
+                            
+                            @* 🔥 EL ESCUDO DOBLE: Solo mostramos la X si tienes permisos Y no es el correo del dueño original *@
+                            @if (!esSoloColaborador && email.ToLower() != expedienteSeleccionado.AsesorOwnerEmail?.ToLower())
+                            {
+                                <i class="bi bi-x-circle-fill text-danger" style="cursor: pointer;" @onclick="() => EliminarColaborador(email)"></i>
+                            }
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    @* --- FIN SECCIÓN COMPARTIR --- *@
+@* --- MENÚ DE PESTAÑAS (TABS) --- *@
+<ul class="nav nav-tabs nav-fill mb-4 border-bottom-0 shadow-sm rounded-top-4 overflow-hidden" style="background-color: #f8f9fa;">
+    <li class="nav-item">
+        <button class="nav-link border-0 py-3 @(pestanaActiva == "Vendedor" ? "active bg-white text-primary fw-bold border-bottom border-primary border-3" : "text-muted")"
+                @onclick='() => pestanaActiva = "Vendedor"'>
+            <i class="bi bi-person-badge me-2"></i>Expediente Vendedor
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link border-0 py-3 @(pestanaActiva == "Comprador" ? "active bg-white text-primary fw-bold border-bottom border-primary border-3" : "text-muted")"
+                @onclick='() => pestanaActiva = "Comprador"'>
+            <i class="bi bi-person-bounding-box me-2"></i>Expediente Comprador
+        </button>
+    </li>
+</ul>
+
+@* --- LISTA DE DOCUMENTOS FILTRADA --- *@
+<div class="tab-content">
+    @* OJO AQUÍ: Este es el nuevo foreach con el filtro mágico *@
+    @foreach (var doc in ChecklistDocs.Where(d => pestanaActiva == "Comprador" ? d.Id != null && d.Id.StartsWith("COMP_") : d.Id == null || !d.Id.StartsWith("COMP_")))
+    {
+        @* Si está cargado, le ponemos un fondo ligerito y un borde verde sutil *@
+        <div class="card mb-3 shadow-sm rounded-4 @(doc.Cargado ? "bg-light border-success border-opacity-50" : "border-0")">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-0 fw-bold">
+                            @doc.Nombre
+                            @if (doc.Opcional)
+                            {
+                                <span class="text-muted fw-normal" style="font-size: 0.75rem;">(Si aplica)</span>
+                            }
+                        </h6>
+                        <span class="badge border text-dark mt-1" 
+                            style="font-size: 0.7rem; background-color: @(doc.Categoria == "NOTARÍA" ? "#e0f2fe" : doc.Categoria == "PERSONAL" ? "#fef08a" : doc.Categoria == "FINANCIERO" ? "#dcfce7" : "#f3f4f6");">
+                            @doc.Categoria
+                        </span>
+                    </div>
+                    @if (doc.Cargado)
+                    {
+                        <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                    }
+                </div>
+                
+                <div class="mt-2">
+                    @if (doc.Cargado)
+                    {
+                        @* SI YA SE CARGÓ: Mostramos los botones de Ver y Reemplazar *@
+                        <div class="d-flex gap-2 w-100">
+                            <button class="btn btn-sm btn-outline-primary flex-fill rounded-3 fw-bold shadow-sm" 
+                                    @onclick="() => VerDocumento(doc)">
+                                <i class="bi bi-eye me-1"></i> Ver
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger flex-fill rounded-3 fw-bold shadow-sm" 
+                                    @onclick="() => BorrarDocumentoIndividual(doc)">
+                                <i class="bi bi-arrow-repeat me-1"></i> Reemplazar
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        @* SI NO SE HA CARGADO: Mostramos el input de subir archivo (SOLO PDF) *@
+                        <InputFile OnChange="@(e => HandleFileSelected(e, doc))" 
+                                accept="application/pdf, .pdf" 
+                                class="form-control form-control-sm rounded-3 shadow-sm" />
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+    <div class="d-flex gap-3 mt-4 mb-5">
+        <button class="btn btn-outline-primary flex-fill fw-bold py-3 rounded-4 shadow-sm" 
+                @onclick='() => ProcesarEnvio("PDF")'>
+            <i class="bi bi-file-earmark-pdf-fill fs-5 me-2 d-block mb-1"></i> 
+            Guardar y enviar<br><small class="fw-normal">en 1 solo PDF</small>
+        </button>
+        
+        <button class="btn btn-primary flex-fill fw-bold py-3 rounded-4 shadow-sm text-white" 
+                style="background-color: var(--brand-black); border: none;"
+                @onclick='() => ProcesarEnvio("ZIP")'>
+            <i class="bi bi-folder-fill fs-5 me-2 d-block mb-1 text-warning"></i> 
+            Guardar y preparar<br><small class="fw-normal">Carpeta de archivos</small>
+        </button>
+    </div>
+</div>
+
+@code {
+    private string pestanaActiva = "Vendedor";
+    private bool estaDescargando = false;
+    private bool esSoloColaborador = false;
+    [Parameter] public string Id { get; set; } = string.Empty;
+    private Expediente expedienteSeleccionado = new Expediente();
+
+    private bool TodosCargados => ChecklistDocs.Where(d => !d.Opcional).All(d => d.Cargado);
+
+    private List<DocEC> ChecklistDocs = new()
+{
+    // ==========================================
+    // 🟠 PESTAÑA: VENDEDOR
+    // ==========================================
+    // --- 1. PERSONAL ---
+    new DocEC { Id = "ID", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Identificación Oficial (Frontal)" },
+    new DocEC { Id = "ID_REV", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Identificación Oficial (Reverso)" },
+    new DocEC { Id = "ACT_NAC", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Acta de Nacimiento Vigente" },
+    new DocEC { Id = "ACT_MAT", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Acta de Matrimonio", Opcional = true },
+    new DocEC { Id = "EDO_CTA", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Último Estado de Cuenta Bancario (3 meses)" },
+    new DocEC { Id = "RFC", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Constancia de Situación Fiscal Vigente" },
+    new DocEC { Id = "CURP", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "CURP Vigente" },
+    new DocEC { Id = "COMP_DOM", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Comprobante de Domicilio" },
+    new DocEC { Id = "POD", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Poder Notarial (si no es propietario)", Opcional = true },
+
+    // --- 2. LEGAL E INMUEBLE ---
+    new DocEC { Id = "ESC", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Título de Propiedad con datos RPP" },
+    new DocEC { Id = "CANC_HIP", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Cancelación de Hipoteca", Opcional = true },
+    new DocEC { Id = "CLG", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Certificado de Libertad de Gravamen" }, 
+    new DocEC { Id = "REC_AGUA", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Servicio de Agua RECIBO vigente" },
+    new DocEC { Id = "REC_LUZ", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Servicio de Luz RECIBO vigente" },
+    new DocEC { Id = "REC_TEL", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Servicio Teléfono", Opcional = true },
+    new DocEC { Id = "CORRESP", Parte = "Vendedor", Categoria = "LEGAL", Nombre = "Correspondencia c/domicilio inmueble", Opcional = true },
+    new DocEC { Id = "PLN", Parte = "Vendedor", Categoria = "TÉCNICO", Nombre = "Planos Arquitectónicos o Croquis", Opcional = true },
+
+    // --- 3. COMERCIAL ---
+    new DocEC { Id = "AV_PRIV", Parte = "Vendedor", Categoria = "COMERCIAL", Nombre = "Aviso de Privacidad / acuse firmar" },
+    new DocEC { Id = "CART_DER", Parte = "Vendedor", Categoria = "COMERCIAL", Nombre = "Carta de derechos Vendedor / acuse firmar" },
+    new DocEC { Id = "PROM_COMP", Parte = "Vendedor", Categoria = "COMERCIAL", Nombre = "Contrato de promesa de Compraventa" },
+    new DocEC { Id = "CON", Parte = "Vendedor", Categoria = "COMERCIAL", Nombre = "Contrato de Intermediación" },
+    new DocEC { Id = "INV", Parte = "Vendedor", Categoria = "COMERCIAL", Nombre = "Inventario Inmueble" },
+
+    // --- 4. TRÁMITES Y NOTARÍA ---
+    new DocEC { Id = "PAGO_PRED", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Comprobante pago Predial" },
+    new DocEC { Id = "NAP", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Constancia de No Adeudo Predial" },
+    new DocEC { Id = "CED", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Cédula Catastral Actualizada" },
+    new DocEC { Id = "NAA", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Constancia de No Adeudo Agua CAPA" },
+    new DocEC { Id = "COOP_OBRA", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Constancia de Cooperación por obra" },
+    new DocEC { Id = "CAMB_PROP", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Cambio de Propietario" },
+    new DocEC { Id = "NOMENCL", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Constancia de Nomenclatura" },
+    new DocEC { Id = "NAO", Parte = "Vendedor", Categoria = "NOTARÍA", Nombre = "Pago de derecho obra pública municipal" },
+
+    // ==========================================
+    // 🔵 PESTAÑA: COMPRADOR
+    // ==========================================
+    new DocEC { Id = "COMP_ID", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Identificación Oficial (Frontal)" },
+    new DocEC { Id = "COMP_ID_REV", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Identificación Oficial (Reverso)" },
+    new DocEC { Id = "COMP_ACT_NAC", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Acta de Nacimiento" },
+    new DocEC { Id = "COMP_ACT_MAT", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Acta de Matrimonio", Opcional = true },
+    new DocEC { Id = "COMP_EDO_CTA", Parte = "Comprador", Categoria = "FINANCIERO", Nombre = "Último Estado de Cuenta Bancario" },
+    new DocEC { Id = "COMP_RFC", Parte = "Comprador", Categoria = "FISCAL", Nombre = "Constancia de Situación Fiscal" },
+    new DocEC { Id = "COMP_CURP", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "CURP Vigente" },
+    new DocEC { Id = "COMP_DOM", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Comprobante de Domicilio" }
+};
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // 0. 🕵️‍♂️ Le preguntamos a Firebase quién está viendo esta pantalla
+            var usuarioSesion = await JS.InvokeAsync<Models.UsuarioLogueado>("obtenerUsuarioActual");
+            string miCorreo = usuarioSesion?.email?.ToLower() ?? "";
+
+            // 1. Buscamos este expediente en Firestore usando la función JS que ya tienes
+            var jsonExpediente = await JS.InvokeAsync<string>("obtenerUnicoExpediente", Id);
+
+            if (!string.IsNullOrEmpty(jsonExpediente))
+            {
+                var opciones = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+                // 🪄 Traducimos TODO el expediente y salvamos los colaboradores
+                expedienteSeleccionado = System.Text.Json.JsonSerializer.Deserialize<Expediente>(jsonExpediente, opciones) ?? new Expediente();
+
+                // 2. Extraer el Checklist de Documentos
+                using var documentoJson = System.Text.Json.JsonDocument.Parse(jsonExpediente);
+                if (documentoJson.RootElement.TryGetProperty("Documentos", out var docsElement))
+                {
+                    var documentosGuardados = System.Text.Json.JsonSerializer.Deserialize<List<DocEC>>(docsElement.GetRawText(), opciones);
+
+                    if (documentosGuardados != null && documentosGuardados.Count > 0)
+                    {
+                        ChecklistDocs = documentosGuardados;
+                    }
+                }
+
+                // 3. 🛡️ NUEVO CANDADO BLINDADO: Detectar si es un invitado por su ROL real
+                bool esRolColaborador = false;
+                
+                // Le preguntamos a Firebase el rol oficial de esta persona en la app
+                if (!string.IsNullOrEmpty(miCorreo))
+                {
+                    var jsonPermisos = await JS.InvokeAsync<string?>("obtenerRolUsuario", miCorreo);
+                    if (!string.IsNullOrEmpty(jsonPermisos))
+                    {
+                        var perfilUsuario = System.Text.Json.JsonSerializer.Deserialize<UsuarioPermisos>(jsonPermisos, opciones);
+                        
+                        // Si su rol principal dice "colaborador", encendemos la alarma
+                        if (perfilUsuario?.Rol?.ToLower() == "colaborador")
+                        {
+                            esRolColaborador = true;
+                        }
+                    }
+                }
+
+                // Activamos el modo restringido y escondemos botones SI:
+                // A) Su rol oficial es "Colaborador" (No importa qué expediente sea)
+                // B) O si está en la lista de invitados y NO es el dueño.
+                if (esRolColaborador || 
+                   (expedienteSeleccionado.Colaboradores != null && 
+                    expedienteSeleccionado.Colaboradores.Contains(miCorreo) && 
+                    expedienteSeleccionado.AsesorOwnerEmail?.ToLower() != miCorreo))
+                {
+                    esSoloColaborador = true; // ¡Se activa el modo restringido!
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar el progreso del expediente: {ex.Message}");
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e, DocEC doc)
+    {
+        var formatosPermitidos = new[] { "application/pdf" };
+
+        if (formatosPermitidos.Contains(e.File.ContentType))
+        {
+            try
+            {
+                // 1. Preparamos el archivo (Límite de 15MB)
+                using var stream = e.File.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024);
+                using var streamRef = new DotNetStreamReference(stream);
+
+                // 2. Llamamos a nuestra función de JS pasándole el ID del expediente y el tipo de archivo
+                var urlDescarga = await JS.InvokeAsync<string>("subirArchivoStorage", Id, doc.Id, streamRef, e.File.ContentType);
+
+                if (!string.IsNullOrEmpty(urlDescarga))
+                {
+                    // 1. Marcamos la casilla en verde en la memoria
+                    doc.Cargado = true;
+                    
+                    // 🪄 EL ESLABÓN PERDIDO: Guardamos el link oficial de Firebase
+                    doc.UrlArchivo = urlDescarga;
+
+                    // 2. ¡EL PASO CLAVE! Guardamos este cambio en Firestore.
+                    await JS.InvokeVoidAsync("actualizarDocumentosExpediente", Id, ChecklistDocs); 
+
+                    // 3. Actualizamos la pantalla
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("alert", $"Error al subir el archivo: {ex.Message}");
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Por favor, selecciona solo archivos PDF .");
+        }
+    }
+    private async Task BorrarDocumentoIndividual(DocEC doc)
+    {
+        // Opcional: Podrías poner una confirmación aquí si quieres, 
+        // pero como pueden volver a subirlo fácilmente, lo borramos directo.
+        try
+        {
+            // 1. Borramos físicamente el archivo de la nube usando la función JS que ya creamos
+            await JS.InvokeVoidAsync("borrarArchivoStorage", Id, doc.Id);
+
+            // 2. Apagamos la palomita en la memoria de la pantalla
+            doc.Cargado = false;
+
+            // 3. Le avisamos a Firestore que este archivo ya no está
+            await JS.InvokeVoidAsync("actualizarDocumentosExpediente", Id, ChecklistDocs);
+
+            // 4. Refrescamos la pantalla (esto hará que el botón de InputFile vuelva a aparecer)
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error al borrar: {ex.Message}");
+        }
+    }
+    private async Task VerDocumento(DocEC doc)
+    {
+        try
+        {
+            // Le pasamos el ID del expediente y el ID del documento a JavaScript
+            await JS.InvokeVoidAsync("abrirArchivoStorage", Id, doc.Id);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"No se pudo abrir el documento: {ex.Message}");
+        }
+    }
+
+    private async Task ProcesarEnvio(string formatoDescarga)
+    {
+        if (!TodosCargados)
+        {
+            await JS.InvokeVoidAsync("alert", "⚠️ Faltan documentos obligatorios.");
+            return;
+        }
+
+        string mensajeConfirmacion = formatoDescarga == "ZIP" 
+            ? "¿Preparar y descargar carpeta con todos los archivos separados?" 
+            : "¿Unir todos los documentos y descargar en un solo PDF?";
+
+        bool confirmado = await JS.InvokeAsync<bool>("confirm", $"{mensajeConfirmacion}\n\nComenzará la cuenta regresiva de 10 días para su eliminación de la nube.");
+
+        if (confirmado)
+        {
+            // 🟢 1. ENCENDEMOS LA PANTALLA DE CARGA
+            estaDescargando = true;
+            StateHasChanged();
+
+            try
+            {
+                string nombreArchivo = expedienteSeleccionado?.PropiedadTitulo ?? "Propiedad";
+                await JS.InvokeVoidAsync("descargarRespaldoExpediente", nombreArchivo, ChecklistDocs, formatoDescarga);
+
+                // 3. Sellamos el expediente
+                var datosCierre = new { Estatus = "Enviado a Notaría", FechaEnvio = DateTime.UtcNow.ToString("o") };
+                await JS.InvokeVoidAsync("sellarExpedienteFirestore", Id, datosCierre);
+
+                // 4. Avisamos que todo salió perfecto
+                await JS.InvokeVoidAsync("alert", $"✅ ¡Expediente enviado! Tu respaldo en {formatoDescarga} se ha descargado.");
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+            }
+            finally
+            {
+                // 🔴 5. APAGAMOS LA PANTALLA DE CARGA (Pase lo que pase)
+                estaDescargando = false;
+                StateHasChanged();
+            }
+        }
+    }
+    private void GenerarExpedienteMaestro()
+    {
+        // Aquí activaremos la lógica del PDF unificado
+    }
+
+    private string nuevoColaboradorEmail = "";
+
+    private async Task AgregarColaborador()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoColaboradorEmail) || !nuevoColaboradorEmail.Contains("@")) return;
+
+        string emailLimpio = nuevoColaboradorEmail.Trim().ToLower();
+
+        if (expedienteSeleccionado.Colaboradores == null)
+            expedienteSeleccionado.Colaboradores = new List<string>();
+
+        if (!expedienteSeleccionado.Colaboradores.Contains(emailLimpio))
+        {
+            expedienteSeleccionado.Colaboradores.Add(emailLimpio);
+
+            // 🔥 NUEVA LLAMADA ANTI-BORRADOS
+            await JS.InvokeVoidAsync("agregarColaboradorFirebase", Id, emailLimpio);
+        }
+
+        nuevoColaboradorEmail = ""; 
+    }
+
+    private async Task EliminarColaborador(string email)
+{
+    if (expedienteSeleccionado.Colaboradores != null)
+    {
+        expedienteSeleccionado.Colaboradores.Remove(email);
+        
+        // Avisamos a Blazor que repinte la pantalla para que desaparezca el nombre
+        StateHasChanged(); 
+
+        await JS.InvokeVoidAsync("eliminarColaboradorFirebase", Id, email);
+    }
+}
+    
+
+    public class DocEC
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Parte { get; set; } = "Vendedor";
+        public string Categoria { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public bool Cargado { get; set; }
+        public bool Opcional { get; set; }
+        public string UrlArchivo { get; set; } = string.Empty;
+    }
+}

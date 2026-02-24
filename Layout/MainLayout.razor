@@ -1,0 +1,44 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <main>
+        <article class="content px-0">
+            @Body
+        </article>
+        <div class="legal-footer text-center mt-5 mb-3">
+    <small class="text-muted">
+        &copy; 2026 <strong>HomeBound</strong>. Todos los derechos reservados.
+        <br>
+        <span style="font-size: 0.8em;">Cancún, México.</span>
+    </small>
+</div>
+
+
+    </main>
+    
+</div>
+
+<style>
+    .page {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background-color: #f0f2f5; /* Fondo gris claro fuera de la app */
+    }
+
+    main {
+        flex: 1;
+        width: 100%;
+        max-width: 600px; /* ANCHO MÁXIMO TIPO CELULAR */
+        margin: 0 auto;   /* CENTRAR EN PANTALLA */
+        background-color: #ffffff; /* Fondo blanco para la app */
+        min-height: 100vh;
+        box-shadow: 0 0 20px rgba(0,0,0,0.05); /* Sombra elegante a los lados */
+    }
+
+    .content {
+        padding-top: 0 !important;
+    }
+    
+</style>
