@@ -276,7 +276,7 @@
     };
 
     // 2. Generar el respaldo local descargable (Por ahora un Acuse de Recibo en .txt)
-    window.descargarRespaldoExpediente = async (idExpediente, checklistJson, formato) => {
+    window.descargarRespaldoExpediente = async (nombreArchivo, checklistJson, formato) => {
     try {
         // 1. Convertimos el JSON a objeto
         const checklist = typeof checklistJson === 'string' ? JSON.parse(checklistJson) : checklistJson;

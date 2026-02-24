@@ -222,7 +222,7 @@
     new DocEC { Id = "COMP_EDO_CTA", Parte = "Comprador", Categoria = "FINANCIERO", Nombre = "Último Estado de Cuenta Bancario" },
     new DocEC { Id = "COMP_RFC", Parte = "Comprador", Categoria = "FISCAL", Nombre = "Constancia de Situación Fiscal" },
     new DocEC { Id = "COMP_CURP", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "CURP Vigente" },
-    new DocEC { Id = "COMP_DOM", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Comprobante de Domicilio" }
+    new DocEC { Id = "COMP_DOMI", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Comprobante de Domicilio" }
 };
     protected override async Task OnInitializedAsync()
     {
@@ -368,53 +368,55 @@
     }
 
     private async Task ProcesarEnvio(string formatoDescarga)
+{
+    if (!TodosCargados)
     {
-        if (!TodosCargados)
+        await JS.InvokeVoidAsync("alert", "⚠️ Faltan documentos obligatorios.");
+        return;
+    }
+
+    string mensajeConfirmacion = formatoDescarga == "ZIP" 
+        ? "¿Preparar y descargar carpeta con todos los archivos separados?" 
+        : "¿Unir todos los documentos y descargar en un solo PDF?";
+
+    bool confirmado = await JS.InvokeAsync<bool>("confirm", $"{mensajeConfirmacion}\n\nComenzará la cuenta regresiva de 10 días para su eliminación de la nube.");
+
+    if (confirmado)
+    {
+        estaDescargando = true;
+        StateHasChanged();
+
+        try
         {
-            await JS.InvokeVoidAsync("alert", "⚠️ Faltan documentos obligatorios.");
-            return;
+            // --- CORRECCIÓN DE NOMBRE ---
+            // Usamos 'expedienteSeleccionado.NombrePropiedad' y lo limpiamos para el archivo
+            string nombreBase = expedienteSeleccionado?.Id ?? "Expediente";
+            string nombreLimpio = nombreBase.Replace(" ", "_").ToUpper();
+
+            // --- CORRECCIÓN DE DATOS ---
+            // Convertimos la lista a JSON antes de enviarla
+            var checklistJson = System.Text.Json.JsonSerializer.Serialize(ChecklistDocs);
+
+            // Llamamos a JS con el nombre limpio y el JSON
+            await JS.InvokeVoidAsync("descargarRespaldoExpediente", nombreLimpio, checklistJson, formatoDescarga);
+
+            // 3. Sellamos el expediente en Firestore
+            var datosCierre = new { Estatus = "Enviado a Notaría", FechaEnvio = DateTime.UtcNow.ToString("o") };
+            await JS.InvokeVoidAsync("sellarExpedienteFirestore", Id, datosCierre);
+
+            await JS.InvokeVoidAsync("alert", $"✅ ¡Expediente enviado! Tu respaldo '{nombreLimpio}' se ha descargado.");
         }
-
-        string mensajeConfirmacion = formatoDescarga == "ZIP" 
-            ? "¿Preparar y descargar carpeta con todos los archivos separados?" 
-            : "¿Unir todos los documentos y descargar en un solo PDF?";
-
-        bool confirmado = await JS.InvokeAsync<bool>("confirm", $"{mensajeConfirmacion}\n\nComenzará la cuenta regresiva de 10 días para su eliminación de la nube.");
-
-        if (confirmado)
+        catch (Exception ex)
         {
-            // 🟢 1. ENCENDEMOS LA PANTALLA DE CARGA
-            estaDescargando = true;
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+        finally
+        {
+            estaDescargando = false;
             StateHasChanged();
-
-            try
-            {
-                string nombreArchivo = expedienteSeleccionado?.PropiedadTitulo ?? "Propiedad";
-                await JS.InvokeVoidAsync("descargarRespaldoExpediente", nombreArchivo, ChecklistDocs, formatoDescarga);
-
-                // 3. Sellamos el expediente
-                var datosCierre = new { Estatus = "Enviado a Notaría", FechaEnvio = DateTime.UtcNow.ToString("o") };
-                await JS.InvokeVoidAsync("sellarExpedienteFirestore", Id, datosCierre);
-
-                // 4. Avisamos que todo salió perfecto
-                await JS.InvokeVoidAsync("alert", $"✅ ¡Expediente enviado! Tu respaldo en {formatoDescarga} se ha descargado.");
-            }
-            catch (Exception ex)
-            {
-                await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
-            }
-            finally
-            {
-                // 🔴 5. APAGAMOS LA PANTALLA DE CARGA (Pase lo que pase)
-                estaDescargando = false;
-                StateHasChanged();
-            }
         }
     }
-    private void GenerarExpedienteMaestro()
-    {
-        // Aquí activaremos la lógica del PDF unificado
-    }
+}
 
     private string nuevoColaboradorEmail = "";
 
