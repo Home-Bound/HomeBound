@@ -286,7 +286,9 @@
                 }
             }
             }
-            @if (datosUsuario != null && datosUsuario.Rol != "COLABORADOR")
+           
+        </div>
+         @if (datosUsuario != null && datosUsuario.Rol != "COLABORADOR")
                     {
                         <div class="position-fixed" style="bottom: 2rem; right: 2rem; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end;">
                             
@@ -323,7 +325,6 @@
                             </button>
                         </div>
                     }
-        </div>
 
 @code {
         // --- NUEVA SEGURIDAD BASADA EN BASE DE DATOS ---
