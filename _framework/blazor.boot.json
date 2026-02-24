@@ -1,7 +1,11 @@
 {
   "mainAssemblyName": "InmoCierres",
   "resources": {
+<<<<<<< HEAD
     "hash": "sha256-OIhzj18ZuKM0XnCkclxhilTj89TpdhufvChRQw9uI1I=",
+=======
+    "hash": "sha256-IqYGzhdancTK/CGWIxKhkSPyq2tjtOasyaPHbtg8Ul8=",
+>>>>>>> 48476e115cff883b6a23342ea6fc9d4bea61119e
     "jsModuleNative": {
       "dotnet.native.8.0.24.0axqf1z5cn.js": "sha256-4g0GzvOXSwZvTLca4PrWJkoeltz+V9IF/hEFDcnVros="
     },
@@ -18,7 +22,11 @@
     },
     "assembly": {
       "Blazored.LocalStorage.wasm": "sha256-cVAxLiUb8qzzOCkXKHPqqYyCUTBYWMeHuxWMBiceDLc=",
+<<<<<<< HEAD
       "InmoCierres.wasm": "sha256-y13gABsoet5ldhq1uBNMyRy+YAFN6h2u8Ko6DjP9koQ=",
+=======
+      "InmoCierres.wasm": "sha256-fzO3BZP0BpVW2EvSFbXVVOAi3tz489GiJcfmHsflj2w=",
+>>>>>>> 48476e115cff883b6a23342ea6fc9d4bea61119e
       "Microsoft.AspNetCore.Authorization.wasm": "sha256-NiC+CQbRtBKCT1PAopFIr8yI9Htk1yXOwXQUbjs//PY=",
       "Microsoft.AspNetCore.Components.Authorization.wasm": "sha256-Rjc3o5zqJjvAwt8Cp0ZIn1NbHRuZiV8/zBwpLesJprQ=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-8MYij9fQfi5lEVffQvTaG+8dJhnoORI57UK0CJMJZvk=",

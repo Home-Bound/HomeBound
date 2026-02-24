@@ -319,7 +319,7 @@
             const contenidoZip = await zip.generateAsync({ type: "blob" });
             const link = document.createElement('a');
             link.href = window.URL.createObjectURL(contenidoZip);
-            link.download = nombreArchivo + '.pdf';
+            link.download = nombreArchivo + '.zip';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
