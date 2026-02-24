@@ -221,8 +221,8 @@
     new DocEC { Id = "COMP_ACT_MAT", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Acta de Matrimonio", Opcional = true },
     new DocEC { Id = "COMP_EDO_CTA", Parte = "Comprador", Categoria = "FINANCIERO", Nombre = "Último Estado de Cuenta Bancario" },
     new DocEC { Id = "COMP_RFC", Parte = "Comprador", Categoria = "FISCAL", Nombre = "Constancia de Situación Fiscal" },
-    new DocEC { Id = "COMP_CURP", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "CURP Vigente" },
-    new DocEC { Id = "COMP_DOMI", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "Comprobante de Domicilio" }
+    new DocEC { Id = "COMP_CURP", Parte = "Comprador", Categoria = "PERSONAL", Nombre = "CURP Vigente" },    // Antes: Id = "COMP_DOM"
+    new DocEC { Id = "VEND_DOM", Parte = "Vendedor", Categoria = "PERSONAL", Nombre = "Comprobante de Domicilio" },
 };
     protected override async Task OnInitializedAsync()
     {
